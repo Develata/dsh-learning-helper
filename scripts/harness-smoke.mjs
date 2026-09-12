@@ -5,25 +5,31 @@ import { mkdtemp, readFile, writeFile, mkdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve, join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
+import { createHash } from 'node:crypto';
+import { resolveHarnessPath, verifyHarnessCheckout } from './harness-checkout.mjs';
 
 const plugin = resolve(import.meta.dirname, '..');
-const harness = resolve(process.argv[2] ?? join(plugin, '..', 'learning-helper'));
+const harness = resolveHarnessPath(process.argv.slice(2), join(plugin, '..', 'learning-helper'));
 const expectedHarness = 'c291e7961a515f6d7af9304e7fd1d257929aef26';
 const work = await mkdtemp(join(tmpdir(), 'learning-helper-smoke-'));
 const env = { ...process.env, DSH_HOME: join(work, 'home') };
 const scrub = s => s.replace(/([?&]token=)[^\s"'<>]+/g, '$1[REDACTED]');
+const appendLog = (log, chunk) => (log + chunk).slice(-1_048_576);
 const receipts = [];
+const resultFile = join(plugin, 'artifacts', 'integration-result.json');
+const verification = { startedAt: new Date().toISOString(), harnessBaseSha: expectedHarness };
+const saveResult = result => writeFile(resultFile, JSON.stringify(result, null, 2) + '\n');
 async function stop(child) {
-  if (child.exitCode !== null || child.signalCode !== null) return;
+  if (!child.pid || child.exitCode !== null || child.signalCode !== null) return;
   const exited = once(child, 'exit');
-  process.kill(-child.pid, 'SIGTERM');
+  try { process.kill(-child.pid, 'SIGTERM'); } catch (e) { if (e.code !== 'ESRCH') throw e; }
   const killTimer = setTimeout(() => { try { process.kill(-child.pid, 'SIGKILL'); } catch (e) { if (e.code !== 'ESRCH') throw e; } }, 5000);
   try { await exited; } finally { clearTimeout(killTimer); }
 }
 async function run(args, cwd = harness, timeout = 120_000) {
   const child = spawn(args[0], args.slice(1), { cwd, env, detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
   let output = ''; let expired = false;
-  child.stdout.on('data', x => { output += x; }); child.stderr.on('data', x => { output += x; });
+  child.stdout.on('data', x => { output = appendLog(output, x); }); child.stderr.on('data', x => { output = appendLog(output, x); });
   const timer = setTimeout(() => { expired = true; void stop(child); }, timeout);
   try {
     const [code] = await once(child, 'exit');
@@ -34,8 +40,8 @@ async function run(args, cwd = harness, timeout = 120_000) {
 async function boot() {
   const child = spawn('pnpm', ['dsh', '--profile', 'learning-helper', '--patch', join(work, 'demo.patch.yml'), '--no-open', '--port', '0'],
     { cwd: harness, env, detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
-  let log = ''; child.stdout.on('data', x => { log += x; }); child.stderr.on('data', x => { log += x; });
-  child.on('error', e => { log += String(e); });
+  let log = ''; child.stdout.on('data', x => { log = appendLog(log, x); }); child.stderr.on('data', x => { log = appendLog(log, x); });
+  child.on('error', e => { log = appendLog(log, String(e)); });
   try {
     const deadline = Date.now() + 45_000;
     let entry;
@@ -69,11 +75,15 @@ async function boot() {
 }
 
 try {
-  assert.equal((await run(['git', 'rev-parse', 'HEAD'])).trim(), expectedHarness);
-  await run(['pnpm', 'run', 'build'], plugin);
   await mkdir(join(plugin, 'artifacts'), { recursive: true });
+  await saveResult({ ...verification, status: 'running' });
+  verification.harnessSha = await verifyHarnessCheckout(harness, expectedHarness);
+  verification.pluginSha = (await run(['git', 'rev-parse', 'HEAD'], plugin)).trim();
+  verification.pluginTreeDirty = Boolean((await run(['git', 'status', '--porcelain'], plugin)).trim());
+  await run(['pnpm', 'run', 'build'], plugin);
   await run(['pnpm', 'pack', '--pack-destination', 'artifacts'], plugin);
   const tarball = join(plugin, 'artifacts', 'dsh-learning-helper-0.1.0.tgz');
+  verification.tarballSha256 = createHash('sha256').update(await readFile(tarball)).digest('hex');
   await run(['pnpm', 'dsh', '--profile', 'learning-helper', '--from-default-profile', 'web', '--dump-config']);
   // Let dsh own composition; pin only the package-manager version in its generated profile.
   const profileFile = join(env.DSH_HOME, 'profiles', 'learning-helper', 'package.json');
@@ -106,8 +116,13 @@ try {
     assert.equal(state.plan.version, 2); assert.equal(state.revisions.length, 1);
     receipts.push('new Harness process recovers SQLite state and idempotent submission receipt');
   } finally { await reopened.close(); }
-  const result = { harnessSha: expectedHarness, node: process.version, profilePnpm: '11.7.0', temporaryState: 'removed after verification', receipts };
-  await writeFile(join(plugin, 'artifacts', 'integration-result.json'), JSON.stringify(result, null, 2) + '\n');
+  const result = { ...verification, status: 'passed', verifiedAt: new Date().toISOString(), node: process.version,
+    profilePnpm: '11.7.0', temporaryState: 'removed after verification', receipts };
+  await saveResult(result);
   console.log(JSON.stringify(result, null, 2));
-} catch (error) { console.error(scrub(error.stack ?? String(error))); process.exitCode = 1; }
+} catch (error) {
+  const message = scrub(error.stack ?? String(error));
+  await saveResult({ ...verification, status: 'failed', error: message });
+  console.error(message); process.exitCode = 1;
+}
 finally { await rm(work, { recursive: true, force: true }); }

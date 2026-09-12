@@ -32,7 +32,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test tests/*.test.ts",
+    "test": "tsx --test tests/*.test.ts tests/*.test.mjs",
     "demo": "tsx demo/math-analysis/run.ts",
     "test:integration": "node scripts/harness-smoke.mjs"
   },

@@ -13,6 +13,7 @@
 | 合法输入的重规划边界 | verified | `tests/adaptation-boundaries.test.ts`：长概念名、任务 ID 碰撞、完成任务/待办任务达上限时仍正确提交 | 提交→Day 2 |
 | Host API 输入与答案隔离 | verified | `tests/http.test.ts`：无 key 投影、拒绝错误输入、body size/time bound、Harness 拒绝回执 | Quiz Host |
 | 真实 Harness local link / tarball / Web boot | verified | local `dsh plugin add` 与 `scripts/harness-smoke.mjs`；会话校验、静态资源、新进程复用 receipt | 运行壳 |
+| Harness 固定基线检查 | verified | `tests/harness-checkout.test.mjs`：CLI 参数、发行说明后代提交、拒绝 committed/staged/unstaged/untracked runtime drift | 安装 |
 | Course 创建 UI / material / citation | planned | P2：当前仅内部 create + authored fixture | 上传/问答 |
 | Agent outline/quiz/plan tools | planned | P3：需要 tool/semantic acceptance | 提案 |
 | Quiz + plan-change UI | planned | P4：尚无 dsh.client，本轮不声称浏览器交互完成 | 交互/解释 |

@@ -6,7 +6,11 @@
 pnpm run test:integration -- /home/deve/gitclone/learning-helper
 ```
 
-要求该 Harness checkout 已完成 install/build 且 SHA 匹配 [COMPATIBILITY](../../COMPATIBILITY.md)。脚本自行 build/pack 插件，经 `dsh plugin add` 安装 tgz 到临时 Web profile，仅为生成后的 profile 添加 pnpm exact version。随后 dump config、启动两个先后独立 Web 进程，验证认证、资源、确定性提交与重启 receipt。端口由 OS 分配；命令最长 120 秒，启动等待最多 45 秒，停止超时 5 秒终止进程组。临时 DSH_HOME 在退出时删除，脱敏摘要写 `artifacts/integration-result.json`。
+要求该 Harness checkout 已完成 install/build，并满足 [COMPATIBILITY](../../COMPATIBILITY.md) 的 exact upstream 基线约束。检查包括已提交、暂存、未暂存和未跟踪的源文件；只有三份发行说明可与基线不同。修改运行时代码后必须先审查并更新基线，不能绕过检查。
+
+脚本自行 build/pack 插件，经 `dsh plugin add` 安装 tgz 到临时 Web profile，仅为生成后的 profile 添加 pnpm exact version。随后 dump config、启动两个先后独立 Web 进程，验证认证、资源、确定性提交与重启 receipt。端口由 OS 分配；每条 Git 基线命令最多 10 秒，其他命令最多 120 秒，启动等待最多 45 秒，停止超时 5 秒终止进程组。每个子进程仅保留最近 1,048,576 个日志字符。临时 DSH_HOME 在退出时删除。
+
+`artifacts/integration-result.json` 保存本次 running/passed/failed 状态、时间、upstream/fork/plugin SHA、插件工作区是否有修改与实际 tarball SHA-256；本次失败会替换旧成功记录。它验证 CLI/Host 与 Web 资源加载，不证明浏览器交互或 LLM 行为。
 
 手动 local-link 开发（已构建的 Harness checkout）：
 
