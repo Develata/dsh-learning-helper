@@ -145,3 +145,62 @@ test('failed authoring storage write is atomic and the same draft succeeds after
   lock.exec('ROLLBACK'); await h.authoring.publishOutline(outline);
   assert.equal(h.service.getState('authoring').conceptStates.length, 2);
 });
+
+test('cancellation while an initial-plan publish waits in the real writer queue prevents the commit', async t => {
+  const h = await fixture(t); await h.authoring.publishOutline(h.drafts.outline);
+  const controller = new AbortController();
+  const preceding = h.store.update('authoring', s => { controller.abort(); return s; });
+  const queued = h.authoring.publishInitialPlan(h.drafts.plan, controller.signal);
+  await preceding; await assert.rejects(queued, { name: 'AbortError' });
+  assert.equal(h.service.getState('authoring').plan, null);
+  await h.authoring.publishInitialPlan(h.drafts.plan);
+  assert.equal(h.service.getState('authoring').plan!.version, 1);
+});
+test('concurrent different initial outlines and plans admit exactly one winner', async t => {
+  const h = await fixture(t); const changed = structuredClone(h.drafts.outline); changed.concepts[0]!.name = '另一个名称';
+  const outlines = await Promise.allSettled([h.authoring.publishOutline(h.drafts.outline), h.authoring.publishOutline(changed)]);
+  assert.equal(outlines.filter(r => r.status === 'fulfilled').length, 1);
+  assert.ok(outlines.some(r => r.status === 'rejected' && code('conflict')(r.reason)));
+  const plans = await Promise.allSettled([h.authoring.publishInitialPlan(h.drafts.plan), h.authoring.publishInitialPlan({ ...h.drafts.plan, startsOn: '2026-09-13' })]);
+  assert.equal(plans.filter(r => r.status === 'fulfilled').length, 1);
+  assert.ok(plans.some(r => r.status === 'rejected' && code('conflict')(r.reason)));
+  assert.equal(h.store.get('authoring')!.plans.length, 1);
+});
+test('quiz publication at capacity still acknowledges identical retries and rejects new content atomically', async t => {
+  const h = await fixture(t); await h.authoring.publishOutline(h.drafts.outline); await h.authoring.publishInitialPlan(h.drafts.plan);
+  const original = await h.authoring.publishQuiz(h.drafts.quiz);
+  // Seed the already-supported durable capacity to isolate the boundary, not 200 redundant tool calls.
+  await h.store.update('authoring', s => {
+    const q = s.quizzes[0]!; s.quizzes.push(...Array.from({ length: 199 }, (_, n) => ({ ...structuredClone(q), id: `capacity-${n}` }))); return s;
+  });
+  assert.deepEqual(await h.authoring.publishQuiz(h.drafts.quiz), original);
+  await assert.rejects(h.authoring.publishQuiz({ ...h.drafts.quiz, purpose: 'next practice' }), code('limit-exceeded'));
+  assert.equal(h.store.get('authoring')!.quizzes.length, 200);
+});
+test('authoring validates up to 100 distinct references with bounded reads, including eight full chunks per concept', async t => {
+  const h = await fixture(t);
+  await h.evidence.importText('authoring', { filename: 'large.md', mimeType: 'text/markdown',
+    text: Array.from({ length: 104 }, (_, i) => `## Topic ${i}\n${'x'.repeat(3800)}\n`).join('') });
+  const chunkIds = Array.from({ length: 104 }, (_, i) => h.evidence.search({ courseId: 'authoring', query: `Topic ${i}` }).results
+    .find(r => r.locator.kind === 'text' && r.locator.section === `Topic ${i}`)!.chunkId);
+  const draft = { courseId: 'authoring', concepts: Array.from({ length: 13 }, (_, n) => ({ id: `concept-${n}`, name: `Topic ${n}`, aliases: [], prerequisiteIds: [],
+    evidenceChunkIds: chunkIds.slice(n * 8, n * 8 + 8) })) };
+  await assert.rejects(h.authoring.publishOutline(draft), code('limit-exceeded'));
+  assert.equal(h.service.getState('authoring').concepts.length, 0);
+  draft.concepts[12]!.evidenceChunkIds = chunkIds.slice(96, 100);
+  const published = await h.authoring.publishOutline(draft);
+  assert.equal(published.concepts.reduce((n, c) => n + c.sourceRefs.length, 0), 100);
+  assert.ok(published.concepts.some(c => c.sourceRefs.length === 8));
+});
+test('plan supports one through fourteen days and fifty tasks per day without relaxing quiz and task bounds', async t => {
+  const h = await fixture(t); await h.authoring.publishOutline(h.drafts.outline);
+  const plan = structuredClone(h.drafts.plan); plan.days = Array.from({ length: 14 }, (_, n) => ({ day: n + 1,
+    tasks: Array.from({ length: 50 }, () => ({ type: 'review', conceptIds: ['continuity'], estimatedMinutes: 1, reason: '复习' })) }));
+  const tooMany = structuredClone(plan); tooMany.days[0]!.tasks.push(tooMany.days[0]!.tasks[0]!);
+  await assert.rejects(h.authoring.publishInitialPlan(tooMany), code('invalid-input'));
+  assert.equal((await h.authoring.publishInitialPlan(plan)).plan.days.length, 14);
+  const tooManyQuiz = structuredClone(h.drafts.quiz); tooManyQuiz.items = Array.from({ length: 21 }, (_, n) => ({ ...tooManyQuiz.items[0]!, prompt: `Question ${n}` }));
+  await assert.rejects(h.authoring.publishQuiz(tooManyQuiz), code('invalid-input'));
+  const other = await authoringDrafts(h, 'single-day'); await h.authoring.publishOutline(other.outline);
+  assert.equal((await h.authoring.publishInitialPlan({ ...other.plan, days: other.plan.days.slice(0, 1) })).plan.days.length, 1);
+});
