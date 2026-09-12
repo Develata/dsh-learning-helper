@@ -15,3 +15,5 @@ pnpm acceptance:llm -- /absolute/path/to/learning-helper
 `artifacts/llm-acceptance.json` 只存本机，记录版本/包摘要、provider/model、工具名、引用、答案和检查项；成功发布的 Quiz 仅提取题目/选项/key/解释/引用字段供数学审查，不复制其他 raw arguments。它是验收人员资料，不是学生界面。`semantic_review_required` **不是 PASS**：还需逐项审查数学证明、资料不足说明、注入行为、Concept/先修关系、计划预算与题目质量，按 [最终验收](../acceptance/final-delivery.md) 记录语义结论。回执不能含 request headers、API key、cookie、launch token 或完整环境；artifacts 不入 Git。
 
 没有 credential 时是 `REAL LLM GATE: BLOCKED — credentials unavailable`，其余交付继续。凭证存在但请求或模型行为失败属于 failed，不能归咎于无凭证。
+
+排障可设置 `LH_LLM_SCENARIOS=plan,quiz` 只复现 authoring；回执的 `fullSuite: false` 明确表示它不满足最终全场景验收。失败 publish 记录有界错误和计划 draft，便于诊断字段校验；最终验收不设置此变量。SIGINT/SIGTERM 会终止并等待本次子进程，记失败并清理隔离目录。

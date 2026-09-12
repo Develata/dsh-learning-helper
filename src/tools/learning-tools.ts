@@ -9,7 +9,7 @@ const conceptProperties = { id: str, name: str, aliases: strings, prerequisiteId
 const concepts = { type: 'array', required: true, items: { type: 'object', additionalProperties: false,
   properties: { ...conceptProperties, courseId: str, sourceRefs: strings } } } as const;
 const taskProperties = { type: { type: 'string', enum: ['learn', 'review', 'practice'], required: true },
-  conceptIds: strings, estimatedMinutes: int, reason: str, questionCount: { type: 'integer' } } as const;
+  conceptIds: strings, estimatedMinutes: int, reason: str, questionCount: { type: 'integer', description: 'Only for practice: integer 1–20. For learn/review OMIT this field entirely; do not send 0 or null.' } } as const;
 const tasks = { type: 'array', required: true, items: { type: 'object', additionalProperties: false,
   properties: { ...taskProperties, id: str, status: { type: 'string', enum: ['pending', 'done'], required: true } } } } as const;
 const plan = { type: 'object', additionalProperties: false, properties: {

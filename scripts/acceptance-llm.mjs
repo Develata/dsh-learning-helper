@@ -10,11 +10,14 @@ import { resolveHarnessPath, verifyHarnessCheckout } from './harness-checkout.mj
 
 const plugin = resolve(import.meta.dirname, '..');
 const harness = resolveHarnessPath(process.argv.slice(2), join(plugin, '..', 'learning-helper'));
+const allScenarios = ['qa', 'insufficient', 'injection', 'plan', 'quiz'];
+const scenarios = process.env.LH_LLM_SCENARIOS?.split(',') ?? allScenarios;
+assert.ok(scenarios.length && new Set(scenarios).size === scenarios.length && scenarios.every(s => allScenarios.includes(s)), 'Invalid scenario selection');
 const userHome = process.env.DSH_HOME ?? join(homedir(), '.dsh');
 const work = await mkdtemp(join(tmpdir(), 'learning-helper-llm-'));
 const env = { ...process.env, DSH_HOME: join(work, 'home') };
 const output = join(plugin, 'artifacts/llm-acceptance.json');
-const result = { date: new Date().toISOString(), status: 'running', scenarios: [], semanticReview: 'pending' };
+const result = { date: new Date().toISOString(), status: 'running', requestedScenarios: scenarios, fullSuite: JSON.stringify(scenarios) === JSON.stringify(allScenarios), scenarios: [], semanticReview: 'pending' };
 const scrub = s => s.replace(/([?&]token=)[^\s"'<>]+/g, '$1[REDACTED]').replace(/Bearer\s+\S+/gi, 'Bearer [REDACTED]');
 async function stop(child) {
   if (!child?.pid || child.exitCode !== null || child.signalCode !== null) return;
@@ -84,7 +87,7 @@ try {
     await request('/learning-helper/v1/courses', { id, title: id === 'llm-course' ? '数学分析验收课程' : '注入防御验收课程', subject: '数学分析', dailyMinutes: 60 });
     await request(`/learning-helper/v1/courses/${id}/sources/text`, { filename, mimeType: filename.endsWith('.md') ? 'text/markdown' : 'text/plain', text: await readFile(join(plugin, 'demo/math-analysis', filename), 'utf8') });
   }
-  for (const scenario of ['qa', 'insufficient', 'injection', 'plan', 'quiz']) {
+  for (const scenario of scenarios) {
     console.log(`Running real scenario: ${scenario}`);
     const r = await request('/learning-helper-acceptance/run', { scenario }, 195_000);
     const needed = scenario === 'plan' ? ['course_outline_publish', 'study_plan_publish'] : scenario === 'quiz' ? ['quiz_publish'] : [];

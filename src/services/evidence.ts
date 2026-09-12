@@ -23,7 +23,11 @@ export const hashText = (text: string): string => createHash('sha256').update(te
 export const chunkIdentity = (sourceId: string, ordinal: number): string => `chk_${hashText(`${sourceId}:text-v1:${ordinal}`)}`;
 export function validate<T>(schema: z.ZodType<T>, value: unknown): T {
   const result = schema.safeParse(value);
-  if (!result.success) throw new LearningError('invalid-input', result.error.issues[0]?.message ?? 'Invalid evidence input');
+  if (!result.success) {
+    const issue = result.error.issues[0];
+    const path = issue?.path.map(String).join('.').slice(0, 200);
+    throw new LearningError('invalid-input', `${path ? path + ': ' : ''}${issue?.message ?? 'Invalid evidence input'}`);
+  }
   return result.data;
 }
 export function normalizeText(raw: string): string {

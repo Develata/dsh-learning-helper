@@ -36,3 +36,5 @@ Draft 的 shape/ownership 验证不能证明模型陈述或答案在数学上被
 Authoring policy 扩展同一 grounding section：用户要求学习计划才 search/read → outline（如缺失）→ initial plan；要求 quiz 才在 outline/plan 就绪后 search/read → quiz。普通问答不授权无关 mutation，Source 中的命令从不授权发布。所有 authoring 只用课程证据/已验证 Concepts，一般知识只能用于明确分区的 QA。禁止 record_attempt、update_mastery、set_correct、raw_sql、source_db_write；本阶段不增加 study_plan_get/quiz_result_get。
 
 P5 语义修正：课程资料不足以支持所请求证明时，说明缺失的定义/定理并停止课程证明。一般知识默认只补充简短背景/直觉；只有用户明确请求独立课外证明才展开，必须说明外部假设与定理，不能把未验证或省略关键构造的论证称为严格证明。此规则由既有 grounding section 拥有，不改变七工具或 durable state。
+
+模型输入校验错误提供首个失败字段路径（最长 200 字符）和原因，不返回堆栈或完整输入；例如 `days.0.tasks.0.questionCount`。learn/review 任务完全省略 questionCount，只有 practice 可携带 1–20。
