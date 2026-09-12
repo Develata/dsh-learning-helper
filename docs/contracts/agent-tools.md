@@ -42,3 +42,5 @@ P5 语义修正：课程资料不足以支持所请求证明时，说明缺失�
 Quiz purpose 按主题描述；只有实际日期与 currentPlan.startsOn 或用户明确选择支持时才关联 Day N，不能因为题目涉及第三天主题就把第三天称为“今天”。
 
 出题前逐题求解，按最终 options 数组的 0-based 下标核对正确选项文本与 explanation；重排后重算下标。每个引用的 chunk 必须实际读取，outline 内出现 ID 不等于读过正文。Domain 校验仍只负责结构和引用，数学正确性不由 schema 保证。
+
+course_search 的模型说明明确现有 lexical contract：只搜正文，空格词为 AND，CJK 为字面 substring；先用一个短主题，语言/同义词分开调用，空结果先缩短词，不能把 filename 与整句一起当语义检索。

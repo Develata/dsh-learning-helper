@@ -35,8 +35,8 @@ export function registerCourseTools(ctx: Context, learning: LearningService, evi
     presentCall: () => ({ card: 'generic', title: '课程列表', kind: 'read' }),
   })));
   ctx.effect(() => ctx.tools.register(defineTool({
-    name: 'course_search', description: 'Search uploaded course evidence. query: 1–200 characters, focused English/Chinese keywords; limit: integer 1–20 (default 5). Read relevant chunk IDs with course_read before citing. No evidence means do not invent course sources.',
-    parameters: { courseId: requiredString, query: requiredString, limit: { type: 'integer' } },
+    name: 'course_search', description: 'Search uploaded course BODY TEXT, not filenames. Lexical matching: ALL space-separated terms must occur in the same chunk; Chinese text uses literal substrings, not semantic expansion. Start with one short topic, use separate calls for alternatives/languages, and shorten empty queries before concluding evidence is absent. query: 1–200 characters; limit: integer 1–20 (default 5). Read relevant chunk IDs with course_read before citing. No evidence means do not invent course sources.',
+    parameters: { courseId: requiredString, query: { ...requiredString, description: 'One focused body-text keyword/phrase, e.g. 一致连续 or uniform continuity. Do not combine a filename, Chinese/English synonyms and a whole question: they are AND conditions, not alternatives. If empty, try a shorter single term.' }, limit: { type: 'integer' } },
     output: { schema: { type: 'object', additionalProperties: false, properties: { courseId: requiredString, query: requiredString,
       results: { type: 'array', required: true, items: { type: 'object', additionalProperties: false,
         properties: { ...citation, score: { type: 'number', required: true }, excerpt: requiredString } } } } }, render: renderEvidence },

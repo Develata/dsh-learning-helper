@@ -5,10 +5,17 @@ export const learningTools = ['course_list', 'course_search', 'course_read', 'le
 export const auxiliaryTools = ['todo_write', 'skill'];
 
 export function projectTrajectory(events) {
+  const searches = [];
   const failedPublications = []; const planDrafts = new Map(); const calls = new Map(); const drafts = new Map(); const authoredQuizzes = []; const tools = []; const reads = []; const publications = []; const successfulPublications = []; let answer = ''; let reason; let errorCode;
   for (const event of events) {
     if (event.type === 'tool/call') {
       calls.set(event.data.callId, event.data.name); tools.push(event.data.name);
+      if (event.data.name === 'course_search') {
+        try {
+          const a = JSON.parse(event.data.arguments);
+          searches.push({ courseId: String(a.courseId ?? '').slice(0, 200), query: String(a.query ?? '').slice(0, 200) });
+        } catch { /* No raw malformed arguments in diagnostics. */ }
+      }
       if (event.data.name.endsWith('_publish')) {
         let evidenceChunkIds = [];
         try {
@@ -57,7 +64,7 @@ export function projectTrajectory(events) {
   const cited = [...text.matchAll(/\[([^\]]+)\]\((learning-evidence:\/\/[^\s)]+)\)/g)].map(m => ({ citationLabel: m[1], canonicalRef: m[2] }));
   const rawRefs = [...text.matchAll(/learning-evidence:\/\/[^\s)\]>]+/g)].map(m => m[0]);
   const valid = cited.every(c => reads.some(r => r.seq < answer.seq && r.canonicalRef === c.canonicalRef && r.citationLabel === c.citationLabel));
-  return { tools, reads, successfulPublications, failedPublications, authoredQuizzes, answer: text, reason, errorCode, citations: cited,
+  return { tools, searches, reads, successfulPublications, failedPublications, authoredQuizzes, answer: text, reason, errorCode, citations: cited,
     checks: { completed: reason === 'completed', searchUsed: tools.includes('course_search'), readUsed: reads.length > 0,
       citationsValid: valid && rawRefs.length === cited.length,
       groundedCitation: cited.length > 0 && valid && rawRefs.length === cited.length,
