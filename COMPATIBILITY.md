@@ -2,7 +2,7 @@
 
 Plugin 0.1.0 的 P1–P4 backend/client loop 已测试于 Harness **0.1.5-rc.2**，exact SHA `c291e7961a515f6d7af9304e7fd1d257929aef26`。Node **24.18.0**；开发/packed profile pnpm **11.7.0**。
 
-复验 fork HEAD：`976e161b99136103ec6a64f8cc31f9d64f1bc5d1`。运行时仍固定上述 upstream SHA；允许后代提交仅改变根目录 `LEARNING_HELPER.md`、`UPSTREAM_BASE.md`、`UPSTREAM_PATCHES.md`。其余 tracked/untracked 源文件必须与固定基线一致；具体运行 HEAD 与包摘要写入集成验收回执。
+P5 开工 fork HEAD：`e56ee57feb140241be6ce9ac9559e83854f7e6ac`。运行时仍固定上述 upstream SHA；后代提交仅允许根目录 `LEARNING_HELPER.md`、`UPSTREAM_BASE.md`、`UPSTREAM_PATCHES.md` 和 `deploy/learning-helper/` 发行层变化。其余 tracked/untracked 源文件必须与基线一致；实际运行 HEAD 与包摘要写入验收回执。
 
 验证：独立 build/typecheck/test/pack；local link install；prebuilt tarball install + config dump + authenticated Web HTML/JS/CSS + Host Course/import + standard Agent 作用域七工具 dispatch + prompt assembly + grounded authoring + P1 submit + 双 DB process restart。另通过 packed Web 的 Learning 入口、课程上传、交互 Quiz、反馈/刷新、Why changed 与 native tool cards 浏览器验收；不声称真实 LLM 或最终交付已完成。详细证据与缺口见 [acceptance](docs/acceptance/matrix.md)。
 

@@ -10,8 +10,8 @@ async function deadline(promise, label) {
 }
 
 /** Actual packed Web + shipped Chromium. Fixture tools replace only the unavailable LLM. */
-export async function browserSmoke({ web, harness, plugin, work }) {
-  const screenshots = join(plugin, 'artifacts', 'browser'); await mkdir(screenshots, { recursive: true });
+export async function browserSmoke({ web, harness, plugin, work, workspacePath, screenshotsPath }) {
+  const screenshots = screenshotsPath ?? join(plugin, 'artifacts', 'browser'); await mkdir(screenshots, { recursive: true });
   await writeFile(join(screenshots, 'result.json'), JSON.stringify({ status: 'running', startedAt: new Date().toISOString() }));
   const require = createRequire(join(harness, 'apps/web/package.json'));
   const { chromium } = require('playwright');
@@ -28,7 +28,8 @@ export async function browserSmoke({ web, harness, plugin, work }) {
     await page.getByRole('textbox', { name: '选择工作区', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: '选择工作区目录' });
     await dialog.getByRole('button', { name: '编辑路径', exact: true }).click();
-    const cwd = join(work, 'student-workspace'); await mkdir(cwd, { recursive: true });
+    const cwd = workspacePath ?? join(work, 'student-workspace');
+    if (!workspacePath) await mkdir(cwd, { recursive: true });
     await dialog.getByRole('textbox', { name: '编辑路径', exact: true }).fill(cwd);
     await dialog.getByRole('textbox', { name: '编辑路径', exact: true }).press('Enter');
     await dialog.getByRole('button', { name: '打开', exact: true }).click();
@@ -117,6 +118,8 @@ export async function browserSmoke({ web, harness, plugin, work }) {
     assert.ok(await groups.nth(0).getByRole('radio').nth(2).isChecked());
     for (let i=1;i<5;i++) await groups.nth(i).getByRole('radio').nth(i<3 ? 2 : 0).check();
     await page.screenshot({ path: join(screenshots, 'quiz-before-submit.png'), fullPage: true });
+    await panel.evaluate(el => el.scrollTo({ top: 0 }));
+    await panel.screenshot({ path: join(screenshots, 'product-quiz.png') });
     const submissions = []; let firstReceipt;
     const submitUrl = `**/learning-helper/v1/courses/${courseId}/submissions`;
     await page.route(submitUrl, async route => {
@@ -136,6 +139,7 @@ export async function browserSmoke({ web, harness, plugin, work }) {
     assert.equal(firstReceipt.attempts.length, 5); await page.unroute(submitUrl);
     await panel.getByRole('button', { name: '进度', exact: true }).click();
     await panel.getByText('薄弱 · Weak', { exact: true }).waitFor();
+    await panel.screenshot({ path: join(screenshots, 'product-progress.png') });
     await panel.getByRole('button', { name: '计划', exact: true }).click();
     await panel.getByRole('heading', { name: '当前计划 · v2', exact: true }).waitFor();
     await panel.getByText('2 条错题证据', { exact: true }).click();
@@ -148,6 +152,11 @@ export async function browserSmoke({ web, harness, plugin, work }) {
         await page.getByRole('button', { name: '全屏', exact: true }).click();
       } else if (width === 1440 && await page.getByRole('button', { name: '退出全屏', exact: true }).count()) await page.getByRole('button', { name: '退出全屏', exact: true }).click();
       await page.screenshot({ path: join(screenshots, `plan-${width}-${theme}.png`), fullPage: true });
+      if (width === 1440 && theme === 'light') {
+        await panel.getByText('2 条错题证据', { exact: true }).click();
+        await panel.screenshot({ path: join(screenshots, 'product-plan.png') });
+        await panel.getByText('2 条错题证据', { exact: true }).click();
+      }
       const dimensions = await panel.evaluate(el => ({ width: el.clientWidth, scroll: el.scrollWidth, page: document.documentElement.scrollWidth, viewport: innerWidth }));
       assert.ok(dimensions.scroll <= dimensions.width + 2, JSON.stringify(dimensions));
       assert.ok(dimensions.page <= dimensions.viewport + 2, JSON.stringify(dimensions));

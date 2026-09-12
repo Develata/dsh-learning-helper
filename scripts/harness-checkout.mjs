@@ -21,7 +21,7 @@ export async function verifyHarnessCheckout(path, expectedBase) {
   // Compare the working tree as well as committed changes; include untracked source.
   const changed = await git(['diff', '--no-ext-diff', '--name-only', '-z', expectedBase, '--']);
   const untracked = await git(['ls-files', '--others', '--exclude-standard', '-z']);
-  const unexpected = (changed + untracked).split('\0').filter(path => path && !releaseMetadata.has(path));
-  assert.deepEqual(unexpected, [], 'Harness runtime differs from the pinned base; only the three release metadata files may differ');
+  const unexpected = (changed + untracked).split('\0').filter(path => path && !releaseMetadata.has(path) && !path.startsWith('deploy/learning-helper/'));
+  assert.deepEqual(unexpected, [], 'Harness runtime differs from the pinned base; only release metadata and deploy/learning-helper may differ');
   return head;
 }

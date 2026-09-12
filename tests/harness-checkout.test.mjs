@@ -35,6 +35,12 @@ test('pinned runtime accepts a descendant containing only release metadata', asy
   git('add', '.'); git('commit', '-m', 'test release metadata');
   const head = git('rev-parse', 'HEAD'); assert.notEqual(head, base);
   assert.equal(await verifyHarnessCheckout(path, base), head);
+  await mkdir(join(path, 'deploy/learning-helper'), { recursive: true });
+  await writeFile(join(path, 'deploy/learning-helper/Dockerfile'), 'FROM pinned-image\n');
+  assert.equal(await verifyHarnessCheckout(path, base), head);
+  await mkdir(join(path, 'deploy/unrelated'), { recursive: true });
+  await writeFile(join(path, 'deploy/unrelated/runtime.js'), 'unexpected\n');
+  await assert.rejects(verifyHarnessCheckout(path, base), /runtime differs/);
 });
 
 for (const mode of ['committed', 'staged', 'unstaged', 'untracked']) test(`runtime guard rejects ${mode} source changes`, async t => {
