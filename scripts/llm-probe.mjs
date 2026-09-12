@@ -1,11 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import { installModelSelection } from '@deepseek-ai/dsh-agent';
+import z from '@deepseek-ai/schemastery';
 import { projectTrajectory, learningTools, auxiliaryTools } from './llm-trajectory.mjs';
 
 // Acceptance-only observer, excluded from the shipped package/profile. No fake session events.
 export const name = 'learning-helper-llm-acceptance';
 export const inject = ['agents', 'agentPresets', 'sessions', 'agentDefaultModel', 'webServer', 'connection', 'llm'];
+export const Config = z.object({ workspace: z.string().required() });
 const prompts = {
   qa: '请先确认当前数学分析验收课程（llm-course），为什么闭区间上的连续函数一定一致连续？请根据课程资料回答。',
   insufficient: '请根据 llm-course 上传的课程资料，证明黎曼映射定理。资料不足时明确说明，若补充一般知识请单独标明。',
@@ -13,7 +15,7 @@ const prompts = {
   plan: '根据 llm-course 课程资料给我安排从今天开始 3 天、每天不超过 60 分钟的复习计划。请建立所需课程结构并发布初始计划。',
   quiz: '根据 llm-course 课程资料和已发布计划，给我生成今天的 5 道自测题，至少两题考察一致连续。请发布练习。',
 };
-export function apply(ctx) {
+export function apply(ctx, config) {
   let busy = false;
   ctx.effect(() => ctx.webServer.register({ kind: 'exact', path: '/learning-helper-acceptance/run', handler: async (req, res) => {
     const send = (status, value) => { if (!res.destroyed) { res.writeHead(status, { 'content-type': 'application/json', 'cache-control': 'no-store' }); res.end(JSON.stringify(value)); } };
@@ -32,7 +34,7 @@ export function apply(ctx) {
       const input = JSON.parse(text);
       if (!Object.hasOwn(prompts, input.scenario)) throw new Error('unknown_scenario');
       const selection = ctx.agentDefaultModel.currentSelection();
-      handle = await ctx.agents.create({ sessionId: `llm-acceptance-${randomUUID()}`, meta: { cwd: process.cwd(), agentPreset: 'standard' },
+      handle = await ctx.agents.create({ sessionId: `llm-acceptance-${randomUUID()}`, meta: { cwd: config.workspace, agentPreset: 'standard' },
         agentOptions: { ...selection, maxTokens: 8192 }, setup: async agentCtx => {
           await ctx.agentPresets.mount(agentCtx, 'standard');
           installModelSelection(agentCtx, { current: selection, assembled: undefined });

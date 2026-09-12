@@ -52,7 +52,8 @@ try {
   await run(['pnpm', 'dsh', 'plugin', '--profile', 'learning-helper', 'add', tarball]);
   // Official provider configuration points at the user's files; no secret copy or environment export.
   const patch = join(work, 'acceptance.patch.yml');
-  await writeFile(patch, `- id: settings\n  config:\n    path: ${JSON.stringify(join(userHome, 'settings.yaml'))}\n- id: credentials\n  config:\n    path: ${JSON.stringify(join(userHome, '.credentials.yaml'))}\n- insert:\n    - id: learning-helper-llm-acceptance\n      name: ${JSON.stringify(join(plugin, 'scripts/llm-probe.mjs'))}\n`);
+  const workspace = join(work, 'student-workspace'); await mkdir(workspace);
+  await writeFile(patch, `- id: settings\n  config:\n    path: ${JSON.stringify(join(userHome, 'settings.yaml'))}\n- id: credentials\n  config:\n    path: ${JSON.stringify(join(userHome, '.credentials.yaml'))}\n- insert:\n    - id: learning-helper-llm-acceptance\n      name: ${JSON.stringify(join(plugin, 'scripts/llm-probe.mjs'))}\n      config:\n        workspace: ${JSON.stringify(workspace)}\n`);
   web = start(['pnpm', 'dsh', '--profile', 'learning-helper', '--patch', patch, '--no-open', '--port', '0']);
   const deadline = Date.now() + 45_000; let entry;
   while (Date.now() < deadline) {
