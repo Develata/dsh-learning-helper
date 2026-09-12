@@ -1,11 +1,13 @@
 # Compatibility
 
-Plugin 0.1.0 的第一轮 vertical slice 已测试于 Harness **0.1.5-rc.2**，exact SHA `c291e7961a515f6d7af9304e7fd1d257929aef26`。Node **24.18.0**；开发/packed profile pnpm **11.7.0**。
+Plugin 0.1.0 的P1/P2 vertical slices 已测试于 Harness **0.1.5-rc.2**，exact SHA `c291e7961a515f6d7af9304e7fd1d257929aef26`。Node **24.18.0**；开发/packed profile pnpm **11.7.0**。
 
 复验 fork HEAD：`81310159250f879bfeb58d179dbc84462381748e`。运行时仍固定上述 upstream SHA；允许后代提交仅改变根目录 `LEARNING_HELPER.md`、`UPSTREAM_BASE.md`、`UPSTREAM_PATCHES.md`。其余 tracked/untracked 源文件必须与固定基线一致；具体运行 HEAD 与包摘要写入集成验收回执。
 
-验证：独立 build/typecheck/test/pack；local link install；prebuilt tarball install + config dump + authenticated Web HTML/JS/CSS + Host submit + process restart。未声称真实 LLM、Quiz UI 或完整 MVP 已完成。详细证据与缺口见 [acceptance](docs/acceptance/matrix.md)。
+验证：独立 build/typecheck/test/pack；local link install；prebuilt tarball install + config dump + authenticated Web HTML/JS/CSS + Host Course/import + 真实 course_list/search/read registry dispatch + prompt assembly + P1 submit + 双 DB process restart。未声称真实 LLM、Quiz UI 或完整 MVP 已完成。详细证据与缺口见 [acceptance](docs/acceptance/matrix.md)。
 
-Host 依赖公开 Cordis、storage-domain、storage-sqlite、webServer、Connection contract，版本由 package.json/pnpm-lock.yaml 固定。Client entry 目前没有需要注册的界面，未声明 dsh.client；后续须使用当前模块 factory contract。
+Host 依赖公开 Cordis、storage-domain、storage-sqlite、webServer、Connection、defineTool、systemPrompt.section contract，版本由 package.json/pnpm-lock.yaml 固定。Client entry 目前没有需要注册的界面，未声明 dsh.client；后续须使用当前模块 factory contract。
 
 不承诺 works with latest；升级任何 pre-stable Harness API 后重跑 `pnpm run test:integration -- /absolute/path/to/learning-helper`，并审查/更新脚本的 exact upstream SHA 与运行时差异检查。
+
+Evidence 使用 Node 内置 node:sqlite；实际测试 Node 24.18.0 FTS5，另以关闭 FTS 的实例验证有界 literal fallback。Node 22.19+ 符合声明 engines，本轮没有单独执行 Node 22 的版本矩阵。插件源码无需 sibling checkout，只有 Harness 集成脚本依赖固定 checkout。

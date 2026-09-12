@@ -70,7 +70,9 @@ async function boot() {
     const submit = body => fetch(`${base}/learning-helper/v1/courses/demo-calculus/submissions`, {
       method: 'POST', headers: { cookie, origin: base, 'content-type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(5000),
     });
-    return { child, get, submit, close: () => stop(child) };
+    const post = (path, body) => fetch(`${base}${path}`, { method: 'POST',
+      headers: { cookie, origin: base, 'content-type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(10_000) });
+    return { child, get, post, submit, close: () => stop(child) };
   } catch (error) { await stop(child); throw error; }
 }
 
@@ -94,11 +96,33 @@ try {
   const dump = await run(['pnpm', 'dsh', '--profile', 'learning-helper', '--dump-config']);
   assert.match(dump, /learning_helper: sqlite/); assert.match(dump, /name: dsh-learning-helper/);
   receipts.push('bundle composition routes learning_helper to SQLite');
-  await writeFile(join(work, 'demo.patch.yml'), '- id: learning-helper\n  config:\n    demo: true\n');
+  await writeFile(join(work, 'demo.patch.yml'), `- id: learning-helper
+  config:
+    demo: true
+    evidencePath: !!js dshHomePath('learning-helper', 'evidence.db')
+- insert:
+    - id: learning-helper-test-probe
+      name: ${JSON.stringify(join(plugin, 'scripts', 'tool-probe.mjs'))}
+`);
   const body = { submissionId: 'smoke-submit', quizId: 'day-1', answers: [0, 1, 2, 1, 0].map((selectedOption, i) => ({ itemId: `q${i + 1}`, selectedOption })) };
-  let first;
+  let first; let citationRead;
   const web = await boot();
   try {
+    const course = await web.post('/learning-helper/v1/courses', { id: 'evidence-smoke', title: '数学分析', subject: 'calculus', dailyMinutes: 60 });
+    assert.equal(course.status, 201);
+    assert.equal((await (await web.get('/learning-helper/v1/courses/evidence-smoke/state')).json()).plan, null);
+    const material = { filename: 'Lecture 03.md', mimeType: 'text/markdown', text: await readFile(join(plugin, 'demo/math-analysis/lecture-03.md'), 'utf8') };
+    const imported = await web.post('/learning-helper/v1/courses/evidence-smoke/sources/text', material); assert.equal(imported.status, 201, await imported.clone().text());
+    assert.equal((await web.post('/learning-helper/v1/courses/evidence-smoke/sources/text', material)).status, 200);
+    const probe = await (await web.get('/learning-helper-test/tools')).json();
+    assert.deepEqual(probe.names.sort(), ['course_list', 'course_read', 'course_search']); assert.match(probe.grounding, /UNTRUSTED EVIDENCE DATA/);
+    const dispatch = async (name, args) => { const res = await web.post('/learning-helper-test/tools', { name, args }); assert.equal(res.status, 200); const result = await res.json(); assert.ok(!result.isError, JSON.stringify(result)); return result.value; };
+    const listed = await dispatch('course_list', {}); assert.ok(listed.courses.some(c => c.id === 'evidence-smoke'));
+    const found = await dispatch('course_search', { courseId: 'evidence-smoke', query: 'Heine Cantor' }); assert.ok(found.results.length > 0);
+    citationRead = await dispatch('course_read', { courseId: 'evidence-smoke', chunkIds: found.results.map(r => r.chunkId) });
+    assert.match(citationRead.chunks[0].text, /闭区间/); assert.match(citationRead.chunks[0].canonicalRef, /^learning-evidence:\/\/evidence-smoke\//);
+    assert.equal(citationRead.chunks[0].locator.kind, 'text'); assert.ok(!('page' in citationRead.chunks[0].locator));
+    receipts.push('empty course → Markdown import/dedupe → standard-preset DSH Agent tool dispatch list/search/read → stable line citation; Agent-scoped grounding section assembled');
     const quiz = await web.get('/learning-helper/v1/courses/demo-calculus/quizzes/day-1');
     assert.equal(quiz.status, 200); assert.doesNotMatch(await quiz.text(), /correctOption|explanation/);
     const response = await web.submit(body); assert.equal(response.status, 200); first = await response.json();
@@ -111,6 +135,10 @@ try {
   } finally { await web.close(); }
   const reopened = await boot();
   try {
+    const evidenceRead = await reopened.post('/learning-helper-test/tools', { name: 'course_read', args: { courseId: 'evidence-smoke', chunkIds: citationRead.chunks.map(c => c.chunkId) } });
+    const result = await evidenceRead.json(); assert.ok(!result.isError); assert.deepEqual(result.value, citationRead);
+    const sourceList = await (await reopened.get('/learning-helper/v1/courses/evidence-smoke/sources')).json(); assert.equal(sourceList.sources.length, 1);
+    receipts.push('new Harness process reopens independent evidence.db with identical chunk text, locator and canonical citation');
     const replay = await reopened.submit(body); assert.equal(replay.status, 200); assert.deepEqual(await replay.json(), first);
     const state = await (await reopened.get('/learning-helper/v1/courses/demo-calculus/state')).json();
     assert.equal(state.plan.version, 2); assert.equal(state.revisions.length, 1);
