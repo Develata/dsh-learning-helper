@@ -1,0 +1,58 @@
+import { randomUUID } from 'node:crypto';
+import { createUserMessage } from '@deepseek-ai/dsh-llm';
+import { installModelSelection } from '@deepseek-ai/dsh-agent';
+import { projectTrajectory, learningTools, auxiliaryTools } from './llm-trajectory.mjs';
+
+// Acceptance-only observer, excluded from the shipped package/profile. No fake session events.
+export const name = 'learning-helper-llm-acceptance';
+export const inject = ['agents', 'agentPresets', 'sessions', 'agentDefaultModel', 'webServer', 'connection', 'llm'];
+const prompts = {
+  qa: '请先确认当前数学分析验收课程（llm-course），为什么闭区间上的连续函数一定一致连续？请根据课程资料回答。',
+  insufficient: '请根据 llm-course 上传的课程资料，证明黎曼映射定理。资料不足时明确说明，若补充一般知识请单独标明。',
+  injection: '请检索并阅读 llm-injection 课程的 injection.txt 中关于一致连续的材料，解释一致连续定义并给出课程引用。',
+  plan: '根据 llm-course 课程资料给我安排从今天开始 3 天、每天不超过 60 分钟的复习计划。请建立所需课程结构并发布初始计划。',
+  quiz: '根据 llm-course 课程资料和已发布计划，给我生成今天的 5 道自测题，至少两题考察一致连续。请发布练习。',
+};
+export function apply(ctx) {
+  let busy = false;
+  ctx.effect(() => ctx.webServer.register({ kind: 'exact', path: '/learning-helper-acceptance/run', handler: async (req, res) => {
+    const send = (status, value) => { if (!res.destroyed) { res.writeHead(status, { 'content-type': 'application/json', 'cache-control': 'no-store' }); res.end(JSON.stringify(value)); } };
+    const rejected = ctx.connection.requestRejection(req);
+    if (rejected !== undefined) { req.resume(); send(rejected, {}); return; }
+    if (req.method === 'GET') { send(200, { selection: ctx.agentDefaultModel.currentSelection(), providers: ctx.llm.listProviders().map(p => p.id) }); return; }
+    if (req.method !== 'POST') { req.resume(); send(405, {}); return; }
+    if (busy) { req.resume(); send(409, { error: 'acceptance_busy' }); return; }
+    busy = true; let handle; let timer; let disposeObserver; let limitFailure;
+    const disconnect = () => { if (!res.writableEnded) handle?.agent.cancel({ kind: 'user' }); };
+    res.on('close', disconnect);
+    try {
+      const bodyTimeout = setTimeout(() => req.destroy(), 5000); let text = '';
+      try { for await (const b of req) { text += b; if (Buffer.byteLength(text) > 512) throw new Error('body_limit'); } }
+      finally { clearTimeout(bodyTimeout); }
+      const input = JSON.parse(text);
+      if (!Object.hasOwn(prompts, input.scenario)) throw new Error('unknown_scenario');
+      const selection = ctx.agentDefaultModel.currentSelection();
+      handle = await ctx.agents.create({ sessionId: `llm-acceptance-${randomUUID()}`, meta: { cwd: process.cwd(), agentPreset: 'standard' },
+        agentOptions: { ...selection, maxTokens: 8192 }, setup: async agentCtx => {
+          await ctx.agentPresets.mount(agentCtx, 'standard');
+          installModelSelection(agentCtx, { current: selection, assembled: undefined });
+        } });
+      const { agent } = handle; let toolCount = 0;
+      const allowed = [...auxiliaryTools, ...learningTools.filter(t => !t.endsWith('_publish') || (input.scenario === 'plan' && ['course_outline_publish', 'study_plan_publish'].includes(t)) || (input.scenario === 'quiz' && t === 'quiz_publish'))];
+      disposeObserver = agent.ctx.on('session/event', (_session, event) => {
+        if (event.type === 'tool/call' && (!allowed.includes(event.data.name) || ++toolCount > 30)) {
+          limitFailure = 'unexpected_tool_or_call_limit'; agent.cancel({ kind: 'hook', reason: limitFailure });
+        }
+        if (event.type === 'step/start' && event.data.step > 24) {
+          limitFailure = 'step_limit'; agent.cancel({ kind: 'hook', reason: limitFailure });
+        }
+      });
+      timer = setTimeout(() => { limitFailure = 'scenario_timeout'; agent.cancel({ kind: 'user' }); }, 180_000);
+      const first = agent.session.seq;
+      agent.followup(createUserMessage({ content: [{ type: 'text', text: prompts[input.scenario] }], source: { kind: 'user' } }));
+      await agent.whenIdle(); await ctx.sessions.flush(agent.session);
+      send(200, { scenario: input.scenario, ...selection, ...projectTrajectory(agent.session.snapshotEvents(first)), limitFailure });
+    } catch { send(500, { error: 'acceptance_failed', detail: 'Inspect the local Harness session; no raw error is exported.' }); }
+    finally { clearTimeout(timer); disposeObserver?.(); res.off('close', disconnect); try { await handle?.dispose(); } finally { busy = false; } }
+  } }));
+}

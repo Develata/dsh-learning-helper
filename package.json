@@ -31,7 +31,8 @@
     "README.md",
     "LICENSE",
     "COMPATIBILITY.md",
-    "docs"
+    "docs",
+    "THIRD_PARTY_NOTICES.md"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node scripts/build-client.mjs",
@@ -41,7 +42,8 @@
     "test:integration": "node scripts/harness-smoke.mjs",
     "demo:evidence": "tsx demo/math-analysis/evidence.ts",
     "demo:authoring": "tsx demo/math-analysis/authoring.ts",
-    "test:client": "tsx --test tests/client/*.test.ts"
+    "test:client": "tsx --test tests/client/*.test.ts",
+    "acceptance:llm": "node scripts/acceptance-llm.mjs"
   },
   "dsh": {
     "bundle": {
