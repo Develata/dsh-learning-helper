@@ -21,3 +21,5 @@ UI 使用 Harness tokens/primitives，状态文字与颜色并用；Plan v1→v2
 POST `/courses` 接收严格 Course draft（id/title/subject/examAt?/dailyMinutes），返回 201 `{ course }`；GET `/courses` 返回 `{ courses }` 元数据列表，不含私有聚合。setup 课程 GET state 正常返回 `plan: null`。
 
 P2 Source API：POST `/courses/:courseId/sources/text` 接收 `{ filename, mimeType: "text/plain" | "text/markdown", text }`（UTF-8 JSON，不用 base64），返回 201 `{ source, deduplicated: false }` 或重复时 200；GET `/courses/:courseId/sources` 返回 `{ sources }`，包含失败状态以便重导。Source body 独立 4 MiB、10 秒，与 [Evidence content 上限](evidence.md) 分开；断开会取消在途解析。GET `/courses/:courseId/evidence/search?query=...&limit=5` 和 POST `/courses/:courseId/evidence/read`（`{ chunkIds }`）返回同 application canonical output；Agent 本身直接调用 service。没有 Source 删除接口。
+
+quiz_publish 的会话文本现在是 courseId/quizId/itemCount/openIn 摘要；卡片兼容该回执和历史完整 public-quiz JSON，未知/越界值保持安全通用入口。即时 ToolRuntime canonical value 仍保留完整 public quiz。浏览器不能假设 canonical value 会替代会话中的 rendered content。

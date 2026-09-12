@@ -23,8 +23,9 @@ export function toolCardModel(name: LearningToolName, block: ToolCallBlock): Too
     const courseId = id(value.courseId) ?? id(record(value.course)?.id);
     if (!courseId) return fallback;
     if (name === 'quiz_publish') {
-      const quiz = record(value.quiz); const quizId = id(quiz?.id);
-      const n = Array.isArray(quiz?.items) ? count(quiz.items.length, 20) : undefined;
+      const quiz = record(value.quiz); const receipt = value.quizId !== undefined;
+      const quizId = receipt ? id(value.quizId) : id(quiz?.id);
+      const n = receipt ? count(value.itemCount, 20) : Array.isArray(quiz?.items) ? count(quiz.items.length, 20) : undefined;
       if (!quizId || !n) return fallback;
       return { title: `${n} 题练习已生成`, lines: ['准备好后开始作答，提交后查看讲解。'], navigation: { courseId, quizId, section: 'quiz' }, action: '开始练习' };
     }

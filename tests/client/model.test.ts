@@ -30,6 +30,17 @@ test('plan snapshot labels do not pretend a published v1 is the current adaptive
   assert.ok(statusRank.weak < statusRank.strong);
 });
 
+test('quiz receipt cards preserve navigation and reject malformed counts without needing full questions', () => {
+  const receipt = { courseId: 'course', quizId: 'quiz', itemCount: 5, openIn: 'Learning panel' };
+  const card = toolCardModel('quiz_publish', settled(receipt));
+  assert.equal(card.title, '5 题练习已生成');
+  assert.deepEqual(card.navigation, { courseId: 'course', quizId: 'quiz', section: 'quiz' });
+  for (const itemCount of [0, 21, 1.5, '5', null]) {
+    assert.equal(toolCardModel('quiz_publish', settled({ ...receipt, itemCount })).action, '打开学习面板');
+  }
+  assert.equal(toolCardModel('quiz_publish', settled({ ...receipt, quizId: '../other' })).action, '打开学习面板');
+});
+
 test('file preflight is bounded and course quick actions separate identity from instructions', () => {
   assert.equal(validateFile({ name: 'lecture.md', size: 512 * 1024, type: '' }), null);
   assert.ok(validateFile({ name: 'lecture.md', size: 512 * 1024 + 1, type: '' }));
