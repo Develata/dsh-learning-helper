@@ -35,7 +35,8 @@
     "test": "tsx --test tests/*.test.ts tests/*.test.mjs",
     "demo": "tsx demo/math-analysis/run.ts",
     "test:integration": "node scripts/harness-smoke.mjs",
-    "demo:evidence": "tsx demo/math-analysis/evidence.ts"
+    "demo:evidence": "tsx demo/math-analysis/evidence.ts",
+    "demo:authoring": "tsx demo/math-analysis/authoring.ts"
   },
   "dsh": {
     "bundle": {
