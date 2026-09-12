@@ -2,12 +2,14 @@
 
 | 模块 | 拥有 | 可以依赖 |
 |---|---|---|
-| domain | Zod schema、实体、不变量、错误 | zod |
-| policy | mastery/hysteresis、ReviewQueue、确定性 replan | domain |
-| services | 提交/读取用例、唯一学习状态写入口、组合 schema 与 policy 的持久化校验 | domain、policy、存储端口 |
-| providers | storage-domain adapter；后续 Parser/EvidenceIndex | services 端口/持久化校验、domain、公开 Harness API |
-| host | Cordis 生命周期、HTTP 校验与结果投影 | services、providers |
-| tools（后续） | Agent-visible proposal/read adapters | services、Harness tools |
-| client（后续） | Quiz/Plan/Progress/Evidence 展示、交互意图 | Host wire contract、公开 slots |
+| domain | Zod schema、实体、不变量、错误、证据限额 | zod |
+| policy | mastery/hysteresis、ReviewQueue、replan；静态 grounding 指令 | domain |
+| services | Course 创建/元数据、唯一学习状态写入口；Evidence 导入/检索/读取用例与 parser/store 端口 | domain、policy、端口 |
+| providers | HarnessLearningStore；SqliteEvidenceStore；TextParser | services 端口/持久化校验、domain、公开 Harness API、Node SQLite/文件设施 |
+| host | Cordis 生命周期、认证 HTTP、输入验证与结果投影 | services、providers、tools 注册 |
+| tools | 只读 Agent adapters、typed canonical output/render | services、公开 Harness tools/systemPrompt |
+| client（后续） | Quiz/Plan/Progress/Evidence 展示与交互意图 | Host wire contract、公开 slots |
 
-只有 application services 触发学习状态写入；grading 与策略为纯函数，不依赖 LLM、时钟或 DB。真实时间由 service 注入一次；HTTP 不接受客户端提供 correct/mastery/submittedAt。providers 不反向调用 UI/tools。数学课程特化放 preset/demo，不定义 MathAnalysisService。
+LearningService 独占学习写用例；grading/策略不依赖 LLM、DB 或系统时钟，时间由 service 注入。EvidenceService 确认 Course 存在后调用 parser/store；SqliteEvidenceStore 只拥有 Evidence DB 和 FTS 投影，不能创建 Course。Learner 聚合不引用 corpus 文本，答题路径不调用 EvidenceStore。检索只读取 Course 元数据，不重放 Attempt。
+
+providers 不反向调用 UI/tools，不 import Harness 私有实现。工具只能读取；资料导入是 Human/Application action。数学内容特化在 preset/demo；不建立 MathAnalysisService。
