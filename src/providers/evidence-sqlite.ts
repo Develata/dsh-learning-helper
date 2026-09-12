@@ -1,7 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { EVIDENCE_LIMITS as L, sourceSchema, sourceChunkSchema } from '../domain/evidence.js';
+import { EVIDENCE_LIMITS as L, sourceSchema, sourceChunkSchema, textWindow } from '../domain/evidence.js';
 import type { Source, SourceChunk, EvidenceHit, EvidenceRead, Citation } from '../domain/evidence.js';
 import type { EvidenceStore } from '../services/evidence.js';
 import { chunkIdentity, hashText } from '../services/evidence.js';
@@ -29,13 +29,15 @@ export function citationFor(source: Source, chunk: SourceChunk): Citation {
   const loc = chunk.locator;
   const place = loc.kind === 'pdf' ? `p.${loc.page}` : `${loc.section ? `${loc.section} · ` : ''}L${loc.startLine}–${loc.endLine}`;
   return { chunkId: chunk.id, sourceId: source.id, filename: source.filename, locator: loc,
-    canonicalRef: `learning-evidence://${source.courseId}/${source.id}/${chunk.id}`, citationLabel: `${source.filename} · ${place}` };
+    canonicalRef: `learning-evidence://${source.courseId}/${source.id}/${chunk.id}`,
+    citationLabel: `${source.filename} · ${place}`.replace(/[\[\]\\<>`]/g, c => ({ '[': '［', ']': '］', '\\': '＼', '<': '＜', '>': '＞', '`': '｀' })[c]!) };
 }
 /** Own database, public node:sqlite only. Never opens state.db or Harness storage internals. */
 export class SqliteEvidenceStore implements EvidenceStore {
   private readonly db: DatabaseSync;
   readonly ftsAvailable: boolean;
   private closed = false;
+  private readonly activeImports = new Set<string>();
   constructor(path: string, options: { fts?: boolean } = {}) {
     if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
     this.db = new DatabaseSync(path, { enableForeignKeyConstraints: true, allowExtension: false });
@@ -121,13 +123,13 @@ export class SqliteEvidenceStore implements EvidenceStore {
   }
   begin(candidate: Source) {
     this.ensureOpen(); sourceSchema.parse(candidate);
-    return this.transaction(() => {
+    const result = this.transaction(() => {
       const row = this.db.prepare('SELECT * FROM sources WHERE course_id=? AND content_hash=?').get(candidate.courseId, candidate.contentHash);
       const existing = row ? sourceFrom(row) : undefined;
       if (existing?.status === 'ready') return { source: existing, deduplicated: true };
-      if (existing?.status === 'processing') throw new LearningError('conflict', 'Source import is already processing; retry later');
+      if (existing?.status === 'processing' && this.activeImports.has(existing.id)) throw new LearningError('conflict', 'Source import is already processing; retry later');
       const count = Number(this.db.prepare('SELECT count(*) AS n FROM sources WHERE course_id=?').get(candidate.courseId)!.n);
-      const bytes = Number(this.db.prepare("SELECT coalesce(sum(byte_size),0) AS n FROM sources WHERE course_id=? AND status!='failed'").get(candidate.courseId)!.n);
+      const bytes = Number(this.db.prepare("SELECT coalesce(sum(byte_size),0) AS n FROM sources WHERE course_id=? AND status!='failed' AND id!=?").get(candidate.courseId, candidate.id)!.n);
       if ((!existing && count >= L.sources) || bytes + candidate.byteSize > L.courseBytes) throw new LearningError('limit-exceeded', 'Course source capacity reached');
       if (existing) {
         const { errorCode: _error, ...previous } = existing;
@@ -138,6 +140,8 @@ export class SqliteEvidenceStore implements EvidenceStore {
         candidate.status, candidate.byteSize, JSON.stringify(candidate));
       return { source: candidate, deduplicated: false };
     });
+    if (!result.deduplicated) this.activeImports.add(result.source.id);
+    return result;
   }
   complete(source: Source, chunks: SourceChunk[]): void {
     this.ensureOpen(); sourceSchema.parse(source); chunks.forEach(c => sourceChunkSchema.parse(c)); this.validateChunks(source, chunks);
@@ -152,11 +156,18 @@ export class SqliteEvidenceStore implements EvidenceStore {
       }
       this.writeSource(source);
     });
+    this.activeImports.delete(source.id);
   }
   fail(id: string, code: NonNullable<Source['errorCode']>, now: string): void {
     this.ensureOpen();
-    const row = this.db.prepare('SELECT * FROM sources WHERE id=?').get(id);
-    if (row && row.status === 'processing') this.writeSource({ ...sourceFrom(row), status: 'failed', errorCode: code, updatedAt: now });
+    try {
+      const row = this.db.prepare('SELECT * FROM sources WHERE id=?').get(id);
+      if (row && row.status === 'processing') this.writeSource({ ...sourceFrom(row), status: 'failed', errorCode: code, updatedAt: now });
+    } finally {
+      // A lock can also block the failure marker. Explicit reimport may reclaim a
+      // processing row once this Host no longer has an operation owning it.
+      this.activeImports.delete(id);
+    }
   }
   listSources(courseId: string): Source[] {
     this.ensureOpen(); return this.db.prepare('SELECT * FROM sources WHERE course_id=? ORDER BY id').all(courseId).map(sourceFrom);
@@ -183,7 +194,7 @@ export class SqliteEvidenceStore implements EvidenceStore {
     return rows.map(row => {
       const { text, ...citation } = this.project(row); const at = text.toLowerCase().indexOf(tokens[0]!);
       const start = Math.max(0, at - 100);
-      return { ...citation, score: -Number(row.rank), excerpt: text.slice(start, start + L.excerptChars) };
+      return { ...citation, score: -Number(row.rank), excerpt: textWindow(text, start, L.excerptChars) };
     });
   }
   read(courseId: string, ids: string[], signal: AbortSignal): EvidenceRead[] {

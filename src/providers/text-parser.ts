@@ -1,5 +1,5 @@
 import { setImmediate } from 'node:timers/promises';
-import { EVIDENCE_LIMITS as L } from '../domain/evidence.js';
+import { EVIDENCE_LIMITS as L, textWindow } from '../domain/evidence.js';
 import type { ParsedChunk, TextImport } from '../domain/evidence.js';
 import type { DocumentParser } from '../services/evidence.js';
 import { LearningError } from '../domain/errors.js';
@@ -23,7 +23,7 @@ export class TextParser implements DocumentParser {
       const line = lines[i]!; const number = i + 1;
       const marker = input.mimeType === 'text/markdown' ? /^\s{0,3}(`{3,}|~{3,})/.exec(line)?.[1]?.[0] : undefined;
       const heading = input.mimeType === 'text/markdown' && !fence ? /^\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$/.exec(line)?.[1] : undefined;
-      if (heading) { flush(); section = heading.slice(0, 200); }
+      if (heading) { flush(); section = textWindow(heading, 0, 200); }
       if (marker) fence = fence === marker ? undefined : fence ?? marker;
       const piece = line + (i < lines.length - 1 ? '\n' : '');
       let offset = 0;

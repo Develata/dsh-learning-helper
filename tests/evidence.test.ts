@@ -155,3 +155,55 @@ for (const corrupt of ['version', 'text', 'locator', 'source-count', 'unversione
   const before = await readFile(path); assert.throws(() => new SqliteEvidenceStore(path));
   assert.deepEqual(await readFile(path), before);
 });
+
+test('citation labels cannot inject a second Markdown link through filenames or headings', async t => {
+  const h = await fixture(t);
+  await h.evidence.importText('course-a', { ...input, filename: 'bad](javascript:alert(1)).md', text: '# heading](learning-evidence://forged)\n一致连续' });
+  const c = h.evidence.search({ courseId: 'course-a', query: '一致连续' }).results[0]!;
+  const rendered = `[${c.citationLabel}](${c.canonicalRef})`;
+  assert.equal([...rendered.matchAll(/\]\(/g)].length, 1);
+});
+test('Unicode section and excerpt truncation must not split surrogate pairs', async t => {
+  const h = await fixture(t);
+  await h.evidence.importText('course-a', { ...input, text: '# ' + 'x'.repeat(199) + '😀\n' + '😀'.repeat(300) + ' 一致连续' });
+  const hits = h.evidence.search({ courseId: 'course-a', query: '😀' });
+  for (const c of hits.results) { assert.ok(c.citationLabel.isWellFormed()); assert.ok(c.excerpt.isWellFormed()); }
+});
+test('a rolled-back SQLite import leaves no chunks; retry after failure keeps one source', async t => {
+  const path = await disk(t); const h = await fixture(t, { path });
+  const db = new DatabaseSync(path); t.after(() => db.close());
+  db.exec("CREATE TRIGGER reject_chunk BEFORE INSERT ON chunks WHEN NEW.ordinal=1 BEGIN SELECT RAISE(ABORT, 'fault injection'); END;");
+  await assert.rejects(h.evidence.importText('course-a', input), /fault injection/);
+  assert.equal(h.evidence.listSources('course-a')[0]!.status, 'failed');
+  assert.equal(db.prepare('SELECT count(*) n FROM chunks').get()!.n, 0);
+  assert.deepEqual(h.evidence.search({ courseId: 'course-a', query: '连续' }).results, []);
+  db.exec('DROP TRIGGER reject_chunk');
+  await h.evidence.importText('course-a', input); assert.equal(h.evidence.listSources('course-a').length, 1);
+});
+test('chunk count, course source count and corpus byte caps reject excess without losing existing evidence', async t => {
+  const h = await fixture(t);
+  await assert.rejects(h.evidence.importText('course-a', { ...input, text: '# section\nx\n'.repeat(513) }), { code: 'limit-exceeded' });
+  for (let i = 1; i <= 31; i++) await h.evidence.importText('course-a', { ...input, text: `source ${i}` });
+  assert.throws(() => h.evidence.importText('course-a', { ...input, text: 'one too many' }), { code: 'limit-exceeded' });
+  assert.equal(h.evidence.listSources('course-a').length, 32);
+  const full = 'a'.repeat(512 * 1024 - 4);
+  for (let i = 0; i < 16; i++) await h.evidence.importText('course-b', { ...input, text: full + String(i).padStart(4, '0') });
+  assert.throws(() => h.evidence.importText('course-b', { ...input, text: 'overflow' }), { code: 'limit-exceeded' });
+  assert.equal(h.evidence.listSources('course-b').length, 16);
+});
+test('evidence import and retrieval never clone or rewrite the learner aggregate', async t => {
+  const h = await fixture(t); let changes = 0; h.learning.ctx.on('domain/changed', () => { changes++; });
+  h.learning.store.get = () => { throw new Error('Whole aggregate access is forbidden in Evidence'); };
+  await h.evidence.importText('course-a', input);
+  const hit = h.evidence.search({ courseId: 'course-a', query: '一致连续' }).results[0]!;
+  h.evidence.read({ courseId: 'course-a', chunkIds: [hit.chunkId] });
+  assert.equal(changes, 0);
+});
+
+test('a SQLite lock during commit is bounded and a later explicit retry needs no Host restart', async t => {
+  const path = await disk(t); const h = await fixture(t, { path }); const db = new DatabaseSync(path); t.after(() => db.close());
+  const start = Date.now(); const pending = h.evidence.importText('course-a', input);
+  db.exec('BEGIN IMMEDIATE'); await assert.rejects(pending, /locked/); db.exec('ROLLBACK');
+  assert.ok(Date.now() - start < 1500);
+  const retry = await h.evidence.importText('course-a', input); assert.equal(retry.source.status, 'ready');
+});

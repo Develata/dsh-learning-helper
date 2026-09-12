@@ -38,3 +38,11 @@ export type Locator = z.infer<typeof locatorSchema>;
 export interface Citation { chunkId: string; sourceId: string; filename: string; locator: Locator; canonicalRef: string; citationLabel: string }
 export interface EvidenceRead extends Citation { text: string }
 export interface EvidenceHit extends Citation { score: number; excerpt: string }
+
+/** A bounded UTF-16 window without incomplete Unicode code points. */
+export function textWindow(text: string, start: number, size: number): string {
+  if (start > 0 && /[\uDC00-\uDFFF]/.test(text[start] ?? '')) start++;
+  let end = Math.min(text.length, start + size);
+  if (end > start && /[\uD800-\uDBFF]/.test(text[end - 1]!)) end--;
+  return text.slice(start, end);
+}
