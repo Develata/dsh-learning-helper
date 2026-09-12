@@ -12,12 +12,16 @@
       "node"
     ],
     "lib": [
-      "ES2024", "DOM"
-    ]
+      "ES2024",
+      "DOM"
+    ],
+    "jsx": "react-jsx"
   },
   "include": [
     "src/**/*.ts",
     "tests/**/*.ts",
-    "demo/**/*.ts"
+    "demo/**/*.ts",
+    "src/**/*.tsx",
+    "tests/**/*.tsx"
   ]
 }

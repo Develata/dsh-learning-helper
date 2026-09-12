@@ -4,9 +4,11 @@
     "outDir": "dist",
     "rootDir": "src",
     "declaration": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "jsx": "react-jsx"
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "src/**/*.tsx"
   ]
 }
