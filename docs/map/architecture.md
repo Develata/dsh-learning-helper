@@ -1,5 +1,15 @@
-# 入口图
+# 实现入口图
 
-计划落点：`src/index.ts`（bundle Host entry）→ `src/host`（HTTP）→ `src/services`（学习用例）→ `src/policy`（评分与 adaptation）→ `src/domain`（schema）。`src/providers` 将 services 的存储端口接到 Harness。
+| 入口 | 用途 / 调用方向 |
+|---|---|
+| `src/index.ts::apply` | 打开学习 store，挂 Host route；关闭时释放 |
+| `src/host/http.ts::createHandler` | Harness 会话检查 → JSON 验证 → LearningService |
+| `src/services/learning.ts::LearningService.submit` | 托管答案评分 → updateConcept → adaptPlan → 一次提交 |
+| `src/domain/model.ts::aggregateSchema` | versioned 数据与跨实体一致性校验 |
+| `src/policy/adaptation.ts::updateConcept/adaptPlan` | 纯 mastery/hysteresis 与预算内未来日重排 |
+| `src/providers/storage-domain.ts::HarnessLearningStore` | bounded queue → learningDomain → KvTable.update |
+| `src/presets/math-analysis/demo.ts::demoCourse` | 显式 opt-in 自编 fixture，非 LLM/资料验收 |
+| `tests/learning.test.ts` / `tests/http.test.ts` | 确定性与 HTTP 行为证明 |
+| `scripts/harness-smoke.mjs` | 真正 packed profile install / Web restart smoke |
 
-Harness 查询：DomainFacility / KvTableImpl.update；WebServer.register；defineTool；ClientModuleRegistry；SlotCore.register；AgentPresets。这些 seams 已在审查中用 CodeGraph 定位。后续实现后更新本图的真实 symbol。
+CodeGraph 查询以上 symbol 定位源码/callers/callees，再读 [ownership](../architecture/module-boundaries.md)。Harness 查询：DomainFacility、KvTableImpl.update、WebServer.register、HostConnectionService.requestRejection；未来 UI/tools 查询 ClientModuleRegistry、SlotCore.register、defineTool、AgentPresets。
