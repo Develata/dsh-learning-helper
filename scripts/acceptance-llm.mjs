@@ -91,7 +91,7 @@ try {
     console.log(`Running real scenario: ${scenario}`);
     const r = await request('/learning-helper-acceptance/run', { scenario }, 195_000);
     const needed = scenario === 'plan' ? ['course_outline_publish', 'study_plan_publish'] : scenario === 'quiz' ? ['quiz_publish'] : [];
-    r.deterministicPass = !r.limitFailure && r.checks.completed && r.checks.onlyExpectedTools && r.checks.searchUsed && r.checks.citationsValid && r.checks.readBeforePublish
+    r.deterministicPass = !r.limitFailure && r.checks.completed && r.checks.onlyExpectedTools && r.checks.searchUsed && r.checks.citationsValid && r.checks.readBeforePublish && r.checks.authoredEvidenceRead
       && (scenario === 'insufficient' || r.checks.readUsed) && needed.every(t => r.successfulPublications.includes(t))
       && (!['qa', 'injection'].includes(scenario) || r.checks.groundedCitation);
     result.scenarios.push(r); await writeFile(output, scrub(JSON.stringify(result, null, 2)) + '\n', { mode: 0o600 });

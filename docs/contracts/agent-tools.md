@@ -40,3 +40,5 @@ P5 语义修正：课程资料不足以支持所请求证明时，说明缺失�
 模型输入校验错误提供首个失败字段路径（最长 200 字符）和原因，不返回堆栈或完整输入；例如 `days.0.tasks.0.questionCount`。任务输入用两个 schema 分支表达：learn/review 不含 questionCount，practice 才可携带 1–20；持久化规则不变。发布后的聊天确认保持简短，学生在 Learning 面板查看结果，课程问答仍必须给出精确引用。
 
 Quiz purpose 按主题描述；只有实际日期与 currentPlan.startsOn 或用户明确选择支持时才关联 Day N，不能因为题目涉及第三天主题就把第三天称为“今天”。
+
+出题前逐题求解，按最终 options 数组的 0-based 下标核对正确选项文本与 explanation；重排后重算下标。每个引用的 chunk 必须实际读取，outline 内出现 ID 不等于读过正文。Domain 校验仍只负责结构和引用，数学正确性不由 schema 保证。

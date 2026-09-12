@@ -83,7 +83,7 @@ export function registerLearningTools(ctx: Context, authoring: CourseAuthoringSe
   ctx.effect(() => ctx.tools.register(defineTool({
     name: 'quiz_publish', description: 'Publish a user-requested grounded MCQ quiz after outline and initial plan exist. First search/read evidence. 1–20 unique prompts, 2–8 distinct options, 0-based correctOption, explanation, 1–16 known concept IDs, 1–8 actual evidence chunk IDs/item; max 100 distinct chunks total. Same semantic quiz returns existing ID, even after submission. Host grades later; result is public and omits answer key. Arguments contain the generated key in session logs.',
     parameters: { courseId: str, purpose: str, items: { type: 'array', required: true, items: { type: 'object', additionalProperties: false,
-      properties: { ...itemProperties, correctOption: int, explanation: str, evidenceChunkIds: strings } } } },
+      properties: { ...itemProperties, correctOption: { ...int, description: 'ZERO-BASED index of the single correct option in the FINAL options array: first=0, second=1, third=2, fourth=3. Solve the question, identify the exact correct option text, then verify options[correctOption] matches both that text and the explanation. Recheck after any reordering.' }, explanation: str, evidenceChunkIds: strings } } } },
     output: { schema: { type: 'object', additionalProperties: false, properties: { courseId: str, quiz: { ...quiz, required: true } } }, render: renderEvidence },
     isConcurrencySafe: () => false, timeoutMs: 5000,
     async execute(args, exec) { return authoring.publishQuiz(args, exec.signal); },

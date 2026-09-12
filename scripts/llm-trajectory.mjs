@@ -9,7 +9,14 @@ export function projectTrajectory(events) {
   for (const event of events) {
     if (event.type === 'tool/call') {
       calls.set(event.data.callId, event.data.name); tools.push(event.data.name);
-      if (event.data.name.endsWith('_publish')) publications.push({ name: event.data.name, seq: event.seq });
+      if (event.data.name.endsWith('_publish')) {
+        let evidenceChunkIds = [];
+        try {
+          const draft = JSON.parse(event.data.arguments);
+          evidenceChunkIds = (draft.concepts ?? draft.items ?? []).flatMap(item => item.evidenceChunkIds ?? []);
+        } catch { /* Invalid input cannot establish grounded authorship. */ }
+        publications.push({ name: event.data.name, callId: event.data.callId, seq: event.seq, evidenceChunkIds, succeeded: false });
+      }
       if (event.data.name === 'study_plan_publish') {
         try { const p = JSON.parse(event.data.arguments); planDrafts.set(event.data.callId, { courseId: p.courseId, startsOn: p.startsOn, days: p.days }); } catch { /* Invalid JSON has no usable draft. */ }
       }
@@ -23,6 +30,8 @@ export function projectTrajectory(events) {
     }
     if (toolResult && !toolResult.isError && calls.get(toolResult.toolCallId)?.endsWith('_publish')) {
       successfulPublications.push(calls.get(toolResult.toolCallId));
+      const publication = publications.find(p => p.callId === toolResult.toolCallId);
+      if (publication) publication.succeeded = true;
     }
     if (toolResult && !toolResult.isError && drafts.has(toolResult.toolCallId)) {
       const draft = drafts.get(toolResult.toolCallId);
@@ -53,5 +62,7 @@ export function projectTrajectory(events) {
       citationsValid: valid && rawRefs.length === cited.length,
       groundedCitation: cited.length > 0 && valid && rawRefs.length === cited.length,
       readBeforePublish: publications.every(p => reads.some(r => r.seq < p.seq)),
+      authoredEvidenceRead: publications.filter(p => p.succeeded && p.name !== 'study_plan_publish').every(p => p.evidenceChunkIds.length > 0
+        && p.evidenceChunkIds.every(id => reads.some(r => r.chunkId === id && r.seq < p.seq))),
       onlyExpectedTools: tools.every(n => [...learningTools, ...auxiliaryTools].includes(n)) } };
 }

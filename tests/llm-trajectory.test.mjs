@@ -37,3 +37,20 @@ test('a publish call alone or rejected result is not a durable publication recei
   assert.deepEqual(projectTrajectory([...events, result(true)]).successfulPublications, []);
   assert.deepEqual(projectTrajectory([...events, result(false)]).successfulPublications, ['study_plan_publish']);
 });
+
+test('every published concept or quiz reference must have been read before that publication', () => {
+  for (const name of ['course_outline_publish', 'quiz_publish']) {
+    const collection = name === 'quiz_publish' ? 'items' : 'concepts';
+    const check = (ids, seq = 3) => {
+      const events = trajectory().filter(e => e.data?.name !== 'study_plan_publish');
+      events.push({ type: 'tool/call', seq, data: { callId: 'publish', name,
+        arguments: JSON.stringify({ [collection]: [{ evidenceChunkIds: ids }] }) } });
+      events.push({ type: 'tool/result', seq: 4, data: { message: createToolResultMessage({ callId: 'publish', isError: false, content: [{ type: 'text', text: '{}' }] }) } });
+      return projectTrajectory(events).checks.authoredEvidenceRead;
+    };
+    assert.equal(check(['chunk']), true);
+    assert.equal(check(['chunk', 'only-seen-in-outline']), false);
+    assert.equal(check(['chunk'], 1), false);
+    assert.equal(check([]), false);
+  }
+});
