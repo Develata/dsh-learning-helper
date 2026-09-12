@@ -1,5 +1,11 @@
 import { LearningError } from '../domain/errors.js';
+import { MAX_TASKS_PER_DAY } from '../domain/model.js';
 import type { Attempt, ConceptState, LearningAggregate, QuizItem } from '../domain/model.js';
+
+export function initialConceptState(courseId: string, conceptId: string): ConceptState {
+  return { courseId, conceptId, mastery: 0.5, evidenceCount: 0, recentCorrect: 0,
+    recentWrong: 0, recentOutcomes: [], status: 'unknown' };
+}
 
 /** Pure monotone score update with a two-error entry / two-success exit threshold. */
 export function updateConcept(previous: ConceptState, attempt: Attempt, difficulty: QuizItem['difficulty']): ConceptState {
@@ -21,7 +27,11 @@ export function adaptPlan(state: LearningAggregate, previouslyWeak: Set<string>,
   state.reviewQueue = state.conceptStates.filter(s => s.status === 'weak').map(s => {
     const evidence = state.attempts.filter(t => t.conceptIds.includes(s.conceptId) && !t.correct).slice(-5);
     const concept = state.concepts.find(c => c.id === s.conceptId)!;
-    return { conceptId: s.conceptId, priority: s.recentWrong, reason: `${concept.name} 最近重复答错，安排定向复习。`,
+    // Keep full names in Concept; at most eight reviews fit in a 240-minute day.
+    // This excerpt bounds both each reason and their combined revision reason.
+    const chars = [...concept.name];
+    const label = chars.length <= 160 ? concept.name : `${chars.slice(0, 160).join('')}…`;
+    return { conceptId: s.conceptId, priority: s.recentWrong, reason: `${label} 最近重复答错，安排定向复习。`,
       evidenceAttemptIds: evidence.map(t => t.id), dueAt: now };
   });
   const newlyWeak = state.reviewQueue.filter(r => !previouslyWeak.has(r.conceptId));
@@ -32,22 +42,29 @@ export function adaptPlan(state: LearningAggregate, previouslyWeak: Set<string>,
   if (!nextDay || newlyWeak.length === 0) return;
   const done = nextDay.tasks.filter(t => t.status === 'done');
   let budget = state.course.dailyMinutes - done.reduce((n, t) => n + t.estimatedMinutes, 0);
-  const selected = newlyWeak.slice(0, Math.floor(budget / 30));
+  const selected = newlyWeak.slice(0, Math.min(Math.floor(budget / 30), Math.floor((MAX_TASKS_PER_DAY - done.length) / 2)));
   if (selected.length === 0) return;
   if (state.revisions.length >= 100) throw new LearningError('limit-exceeded', 'Plan revision capacity reached');
   const next = structuredClone(old);
   next.version++; next.createdAt = now;
   const day = next.days.find(d => d.day === nextDay.day)!;
   day.tasks = structuredClone(done);
-  for (const [i, review] of selected.entries()) {
+  const usedIds = new Set(old.days.flatMap(d => d.tasks.map(t => t.id)));
+  const taskId = (kind: 'review' | 'practice') => {
+    const prefix = `v${next.version}-${kind}-`;
+    let index = 0;
+    while (usedIds.has(`${prefix}${index}`)) index++;
+    const id = `${prefix}${index}`; usedIds.add(id); return id;
+  };
+  for (const review of selected) {
     day.tasks.push(
-      { id: `v${next.version}-review-${i}`, type: 'review', conceptIds: [review.conceptId], estimatedMinutes: 20, reason: review.reason, status: 'pending' },
-      { id: `v${next.version}-practice-${i}`, type: 'practice', conceptIds: [review.conceptId], estimatedMinutes: 10, questionCount: 3, reason: review.reason, status: 'pending' },
+      { id: taskId('review'), type: 'review', conceptIds: [review.conceptId], estimatedMinutes: 20, reason: review.reason, status: 'pending' },
+      { id: taskId('practice'), type: 'practice', conceptIds: [review.conceptId], estimatedMinutes: 10, questionCount: 3, reason: review.reason, status: 'pending' },
     );
     budget -= 30;
   }
   for (const task of nextDay.tasks.filter(t => t.status === 'pending')) {
-    if (budget <= 0) break;
+    if (budget <= 0 || day.tasks.length >= MAX_TASKS_PER_DAY) break;
     // Keep practice items whole; shrinking their time would imply an unjustified pace.
     if (task.questionCount !== undefined && task.estimatedMinutes > budget) continue;
     const minutes = Math.min(task.estimatedMinutes, budget);

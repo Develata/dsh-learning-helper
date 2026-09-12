@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { aggregateSchema, submissionSchema, idSchema } from '../domain/model.js';
+import { submissionSchema, idSchema } from '../domain/model.js';
+import { learningStateSchema } from './state-schema.js';
 import type { LearningAggregate, Submission, Receipt } from '../domain/model.js';
 import { LearningError } from '../domain/errors.js';
 import { adaptPlan, updateConcept } from '../policy/adaptation.js';
@@ -20,7 +21,7 @@ const normalized = (s: Submission) => JSON.stringify({ quizId: s.quizId, answers
 /** The only learning-state mutation owner. Clock is supplied once per submission by the Host. */
 export class LearningService {
   constructor(private readonly store: LearningStore, private readonly clock: () => Date = () => new Date()) {}
-  async create(input: unknown): Promise<void> { await this.store.create(parse(aggregateSchema, input)); }
+  async create(input: unknown): Promise<void> { await this.store.create(parse(learningStateSchema, input)); }
   private requireCourse(id: string): LearningAggregate {
     parse(idSchema, id);
     const state = this.store.get(id);
@@ -79,7 +80,7 @@ export class LearningService {
       const receipt: Receipt = { submission: structuredClone(submission), attemptIds, submittedAt: now, planVersion: next.plans.at(-1)!.version };
       if (next.revisions.length > current.revisions.length) receipt.revision = next.revisions.at(-1)!;
       next.submissions.push(receipt);
-      return aggregateSchema.parse(next);
+      return learningStateSchema.parse(next);
     });
     const receipt = state.submissions.find(s => s.submission.submissionId === submission.submissionId)!;
     const attempts = state.attempts.filter(a => a.submissionId === submission.submissionId);

@@ -1,5 +1,6 @@
 import { aggregateSchema } from '../../domain/model.js';
 import type { LearningAggregate, Submission } from '../../domain/model.js';
+import { initialConceptState } from '../../policy/adaptation.js';
 
 /** Authored fixture only; not a generated quiz and not evidence-grounded course content. */
 export function demoCourse(now = '2026-09-12T09:00:00.000Z'): LearningAggregate {
@@ -22,8 +23,7 @@ export function demoCourse(now = '2026-09-12T09:00:00.000Z'): LearningAggregate 
     concepts: names.map(([id, name], i) => ({ id, name, courseId: 'demo-calculus', aliases: [], prerequisiteIds: i ? [names[i - 1]![0]] : [], sourceRefs: [] })),
     quizzes: [{ id: 'day-1', courseId: 'demo-calculus', purpose: 'Day 1 authored fixture', createdAt: now,
       items: questions.map(q => ({ ...q, sourceRefs: [], difficulty: 'medium' })) }],
-    attempts: [], conceptStates: names.map(([id]) => ({ courseId: 'demo-calculus', conceptId: id, mastery: 0.5,
-      evidenceCount: 0, recentCorrect: 0, recentWrong: 0, recentOutcomes: [], status: 'unknown' })),
+    attempts: [], conceptStates: names.map(([id]) => initialConceptState('demo-calculus', id)),
     reviewQueue: [], plans: [{ id: 'three-day-plan', courseId: 'demo-calculus', version: 1, createdAt: now,
       startsOn: now.slice(0, 10), days: [1, 2, 3].map(day => ({ day, tasks: [{ id: `day-${day}-learn`, type: 'learn',
         conceptIds: [day === 1 ? 'continuity' : 'function-limits'], estimatedMinutes: 60, reason: '初始复习安排', status: 'pending' }] })) }],

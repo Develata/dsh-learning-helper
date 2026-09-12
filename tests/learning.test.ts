@@ -7,6 +7,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { spawnSync } from 'node:child_process';
 import { demoCourse, demoSubmission } from '../src/presets/math-analysis/demo.js';
 import { aggregateSchema } from '../src/domain/model.js';
+import type { LearningAggregate } from '../src/domain/model.js';
 import { updateConcept } from '../src/policy/adaptation.js';
 import { openLearning } from './helpers.js';
 
@@ -206,4 +207,34 @@ test('equivalent ISO timestamps with different fractional precision are not a cl
   const h = await openLearning(':memory:', '2026-09-12T09:00:00.000Z'); t.after(() => h.close());
   await h.service.create(demoCourse('2026-09-12T09:00:00Z'));
   assert.equal((await h.service.submit('demo-calculus', demoSubmission())).attempts.length, 5);
+});
+
+const corruptions: [string, (state: LearningAggregate) => void][] = [
+  ['mastery diverges from attempts', s => { s.conceptStates[3]!.mastery = 0.99; }],
+  ['weak status is erased', s => { s.conceptStates[3]!.status = 'learning'; s.reviewQueue = []; }],
+  ['review duplicates one error as two pieces of evidence', s => {
+    s.reviewQueue[0]!.evidenceAttemptIds = [s.attempts[3]!.id, s.attempts[3]!.id];
+  }],
+  ['revision cites correct answers', s => {
+    s.revisions[0]!.evidenceAttemptIds = s.attempts.slice(0, 2).map(a => a.id);
+    s.submissions[0]!.revision = structuredClone(s.revisions[0]!);
+  }],
+];
+for (const [label, corrupt] of corruptions) test(`restart rejects derived-state corruption: ${label}`, options, async t => {
+  const dir = await mkdtemp(join(tmpdir(), 'learning-derived-')); t.after(() => rm(dir, { recursive: true, force: true }));
+  const path = join(dir, 'learning.db'); const h = await openLearning(path);
+  await h.service.create(demoCourse()); await h.service.submit('demo-calculus', demoSubmission());
+  const state = h.store.get('demo-calculus')!; await h.close(); corrupt(state);
+  const db = new DatabaseSync(path); t.after(() => db.close());
+  const raw = JSON.stringify(state);
+  db.prepare('UPDATE u_learning_helper_courses SET value = ? WHERE key = ?').run(raw, state.course.id);
+  await assert.rejects(async () => { const reopened = await openLearning(path); t.after(() => reopened.close()); }, /schema/);
+  assert.equal(db.prepare('SELECT value FROM u_learning_helper_courses').get()!.value, raw);
+});
+
+test('course creation cannot set mastery or a status unsupported by evidence', options, async t => {
+  const h = await openLearning(); t.after(() => h.close());
+  const state = demoCourse(); state.conceptStates[0]!.mastery = 1; state.conceptStates[0]!.status = 'strong';
+  await assert.rejects(h.service.create(state), { code: 'invalid-input' });
+  assert.equal(h.store.get(state.course.id), undefined);
 });

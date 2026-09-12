@@ -1,12 +1,12 @@
 import { defineDomain, domainTable } from '@deepseek-ai/dsh-storage-domain';
 import type { Domain, DomainFacility } from '@deepseek-ai/dsh-storage-domain';
-import { aggregateSchema } from '../domain/model.js';
+import { learningStateSchema } from '../services/state-schema.js';
 import type { LearningAggregate } from '../domain/model.js';
 import { LearningError } from '../domain/errors.js';
 import type { LearningStore } from '../services/learning.js';
 
 export const learningDomain = defineDomain({ name: 'learning_helper', version: 1,
-  tables: { courses: domainTable<string, LearningAggregate>(aggregateSchema) } });
+  tables: { courses: domainTable<string, LearningAggregate>(learningStateSchema) } });
 
 /** Single-writer adapter. A bounded queue also makes create-if-absent atomic within this Host. */
 export class HarnessLearningStore implements LearningStore {
@@ -36,7 +36,7 @@ export class HarnessLearningStore implements LearningStore {
     return state === undefined ? undefined : structuredClone(state);
   }
   create(state: LearningAggregate): Promise<void> {
-    const owned = aggregateSchema.parse(state);
+    const owned = learningStateSchema.parse(state);
     return this.enqueue(async () => {
       const table = this.domain.table('courses');
       if (table.get(owned.course.id)) throw new LearningError('conflict', 'Course already exists');
@@ -51,7 +51,7 @@ export class HarnessLearningStore implements LearningStore {
       if (!current) throw new LearningError('not-found', 'Course not found');
       const next = transform(structuredClone(current));
       if (next.course.id !== id) throw new LearningError('invalid-input', 'Course identity is immutable');
-      const validated = aggregateSchema.parse(next);
+      const validated = learningStateSchema.parse(next);
       // Replay acknowledgement must not emit a new domain write or fail on an unrelated lock.
       if (JSON.stringify(current) === JSON.stringify(validated)) return structuredClone(current);
       const saved = await table.update(id, () => validated);

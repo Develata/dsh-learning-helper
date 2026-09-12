@@ -5,6 +5,7 @@ const timestamp = z.iso.datetime();
 const text = z.string().min(1).max(4000);
 const ids = z.array(idSchema).min(1).max(16).refine(xs => new Set(xs).size === xs.length, 'duplicate ids');
 const sourceRefs = z.array(z.string().min(1).max(300)).max(32);
+export const MAX_TASKS_PER_DAY = 50;
 export const courseSchema = z.strictObject({
   id: idSchema, title: text, subject: text, createdAt: timestamp,
   examAt: timestamp.optional(), dailyMinutes: z.number().int().min(30).max(240),
@@ -46,7 +47,7 @@ export const taskSchema = z.strictObject({
 });
 export const studyPlanSchema = z.strictObject({
   id: idSchema, courseId: idSchema, version: z.number().int().positive(), createdAt: timestamp,
-  startsOn: z.iso.date(), days: z.array(z.strictObject({ day: z.number().int().min(1).max(14), tasks: z.array(taskSchema).max(50) })).min(1).max(14),
+  startsOn: z.iso.date(), days: z.array(z.strictObject({ day: z.number().int().min(1).max(14), tasks: z.array(taskSchema).max(MAX_TASKS_PER_DAY) })).min(1).max(14),
 });
 export const revisionSchema = z.strictObject({
   oldVersion: z.number().int().positive(), newVersion: z.number().int().positive(),
@@ -105,6 +106,7 @@ export const aggregateSchema = z.strictObject({
   if (a.conceptStates.length !== a.concepts.length) fail('missing concept states');
   for (const r of a.reviewQueue) {
     refs([r.conceptId]);
+    unique(r.evidenceAttemptIds, 'review evidence');
     if (a.conceptStates.find(s => s.conceptId === r.conceptId)?.status !== 'weak'
       || r.evidenceAttemptIds.some(id => !attempts.get(id)?.conceptIds.includes(r.conceptId) || attempts.get(id)?.correct)) fail('invalid review evidence');
   }
@@ -120,7 +122,8 @@ export const aggregateSchema = z.strictObject({
   });
   if (a.revisions.length !== a.plans.length - 1) fail('missing plan revision');
   a.revisions.forEach((r, i) => {
-    if (r.oldVersion !== i + 1 || r.newVersion !== i + 2 || r.evidenceAttemptIds.some(id => !attempts.has(id))) fail('invalid revision evidence/version');
+    unique(r.evidenceAttemptIds, 'revision evidence');
+    if (r.oldVersion !== i + 1 || r.newVersion !== i + 2 || r.evidenceAttemptIds.some(id => !attempts.has(id) || attempts.get(id)!.correct)) fail('invalid revision evidence/version');
   });
   for (const s of a.submissions) {
     const q = quizzes.get(s.submission.quizId);
