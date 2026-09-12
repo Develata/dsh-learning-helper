@@ -14,7 +14,14 @@
 | Host API 输入与答案隔离 | verified | `tests/http.test.ts`：无 key 投影、拒绝错误输入、body size/time bound、Harness 拒绝回执 | Quiz Host |
 | 真实 Harness local link / tarball / Web boot | verified | local `dsh plugin add` 与 `scripts/harness-smoke.mjs`；会话校验、静态资源、新进程复用 receipt | 运行壳 |
 | Harness 固定基线检查 | verified | `tests/harness-checkout.test.mjs`：CLI 参数、发行说明后代提交、拒绝 committed/staged/unstaged/untracked runtime drift | 安装 |
-| Course 创建 UI / material / citation | planned | P2：当前仅内部 create + authored fixture | 上传/问答 |
+| 空 Course lifecycle | verified | tests/course-lifecycle.test.ts：空集合/plan=null、无 plan 拒绝 practice；P1 完整 fixture 仍合法 | 创建 |
+| TXT/MD 导入、hash 去重与容量 | verified | tests/evidence.test.ts / evidence-http.test.ts：normalize/dedupe、独立 body bound、Source/Chunk/corpus 上限 | 上传 |
+| Evidence 隔离与稳定引用 | verified | 英中/LaTeX search、read 顺序/总量/wrong-course、locator/hash 校验、Markdown 标签与 Unicode 边界回归 | 检索/引用 |
+| Evidence 原子写与恢复 | verified | SQLite trigger/lock 失败无部分 chunks；显式 retry；stale processing、损坏/版本拒绝；新 Node/Harness 进程回读一致 | 重启 |
+| 三个真实 DSH 只读 tools | verified | tests/course-tools.test.ts；packed profile 中 standard Agent-scoped dispatch + canonical output + grounding assembly | Agent retrieval |
+| Grounded QA 的工具与引用路径 | verified | course_search → course_read → citation 逐一映射；instruction-like fixture 保持不可信数据，学习 DB 不变 | 证据问答基础 |
+| 真实 LLM 数学/抗注入语义 | planned | NOT RUN：本机无模型凭证，不能把 deterministic/policy tests 称为真实 Agent semantic 验收 | LLM 回答 |
+| PDF 与 Source 创建 UI | planned | P2 Hard Gate 仅 TXT/MD Host API，Parser seam 保留；OpenFile strict-peer probe 不通过 | 上传界面 |
 | Agent outline/quiz/plan tools | planned | P3：需要 tool/semantic acceptance | 提案 |
 | Quiz + plan-change UI | planned | P4：尚无 dsh.client，本轮不声称浏览器交互完成 | 交互/解释 |
 | pinned Docker delivery | planned | P5 | cold boot |

@@ -1,13 +1,15 @@
 # 当前状态
 
-- Current phase：P1 vertical slice 已实现并完成本轮 review 修复；下一阶段 P2（资料与证据）。
-- Last known good commit：`f10620ab09087e77219c126b1c505290183535f0`。业务状态修复 `469fd81` 与集成验收修复 `f10620a` 已分批提交；代码与下述已验证工作区一致，不是完整 MVP release。
-- What works：独立 TypeScript bundle；真实 storage-domain/SQLite；5 题评分与 Attempt → weak → ReviewQueue → Day 2 PlanRevision；幂等、并发、锁失败整体回滚、进程重启恢复；Host API 与 prebuilt tgz 集成。
-- Review fixes：派生状态按实际策略重放校验，拒绝无证据的 mastery/status、重复或答对记录的复习引用；长概念名、任务 ID 碰撞、任务槽不足不再破坏合法提交；集成命令正确处理 pnpm 的 `--`，固定 upstream runtime 并允许 fork 发行说明，回执区分本次成功/失败与工作区状态。
-- What is broken / incomplete：本轮已复现问题均已修复，当前验证无失败。资料上传/检索/citation、Agent tools、交互 Quiz UI、学习 preset、Docker 尚未实现。
-- Active decisions：见 [ownership](architecture/module-boundaries.md) 与 [persistence](contracts/persistence.md)；Harness core patch = 0，学习 DB 由单 Host 写入。本轮没有修改 Harness fork。
-- Known blockers：P2 无新增阻塞。上一轮已记录的 OpenFile peer 版本差异尚未复验；TXT/MD 先行不依赖它。
-- Last verification（2026-09-12，Node 24.18.0 / pnpm 11.7.0）：`pnpm run typecheck`、`pnpm test`（38/38）、`git diff --check` 通过；`pnpm run test:integration -- /home/deve/gitclone/learning-helper` 通过 build/pack、tarball 安装、config dump、认证/来源校验、Web HTML/JS/CSS、Host 提交及新进程幂等回执恢复。具体运行与包摘要见本地 `artifacts/integration-result.json`。
-- Standalone verification：复制当前源码、脚本和测试到无 sibling checkout 的独立临时目录，`pnpm install --offline --frozen-lockfile`、typecheck、38 tests、build、pack 均通过；临时副本已删除。CodeGraph 已同步。
-- Harness baseline：upstream `c291e7961a515f6d7af9304e7fd1d257929aef26` / 0.1.5-rc.2；本轮集成使用 fork `81310159250f879bfeb58d179dbc84462381748e`。此前 build 与 storage tests 49/49 已通过，本轮未修改上游代码，未重复运行其全量检查。未做真实 LLM 或浏览器交互/视觉验收。
-- Next 3 concrete tasks：① Course 创建用例与 Source/Chunk，TXT/MD 导入/hash 去重/稳定 locator；② 独立 SQLite FTS EvidenceIndex 与 course_search/read 引用契约；③ PDF parser adapter 的实际版本验证、timeout/retry/restart recovery 与文本 fallback。
+- Current phase：P2 Source/Evidence + Grounded Read Tools 已实现，完成 adversarial self-review/fix/recheck。Hard Gate 的空 Course → TXT/MD → 持久化 → 检索/回读 → 真实 DSH Agent tools → 稳定引用已验证；真实 LLM 数学回答/抗注入语义尚未运行。
+- Last known good implementation commit：`2d3e538f27659e07a674d0af244d2d3ecdd82196`，含 Course lifecycle、独立 Evidence、review 修复与 packed Agent 集成。最终交付版本是本文件所在的插件提交（`git rev-parse HEAD`）；fork 的 exact compatible plugin pin 由其 UPSTREAM_BASE.md 拥有，避免两个提交互相嵌入尚未生成的 SHA。
+- What works：P1 评分/Attempt → weak → ReviewQueue → PlanRevision 及其幂等/串行化/重启仍通过。P2 兼容 v1 空 setup、受认证 Course/source Host API、稳定 line/column locator、normalized hash 去重、FTS5/BM25 + 中文/公式 literal 检索、course-scoped read、独立 evidence.db 恢复、三个 typed 只读工具与 grounding section。
+- Review findings fixed：P1 优先级的 SQLite lock 阻止失败标记后重导卡 processing，现显式重导可以接管已退出的任务；P2 优先级的 metadata Markdown 链接注入与 Unicode 截断，现引用 label 安全替换分隔符、截断保留完整 code point。回归先失败后通过。另验证 partial import 全回滚、容量边界、Evidence 不访问学习聚合。复审无当前 scope 内已知 correctness failure。
+- Active decisions：Learning state.db 保持 storage-domain version 1（仅兼容放宽）；Evidence schema user_version=1，独立所有权与失败模型见 ADR-0003。单 Host 拥有两库，不做跨库事务，不删除 Source。不使用 Harness private API，不改 packages/apps。
+- Last verification（2026-09-12，Node 24.18.0 / pnpm 11.7.0）：typecheck PASS；tests **69/69**；build PASS；`pnpm demo` PASS；`pnpm demo:evidence` PASS；pack PASS；`git diff --check` PASS。两种 demo 都是 deterministic，本轮未用模型生成答案。
+- Harness integration PASS：`pnpm run test:integration -- /home/deve/gitclone/learning-helper` 实际 tgz 安装、dump、认证/Origin/Web 资源、Course 创建与导入去重、standard preset 真实 Agent 的 course_list/search/read dispatch 与 Agent-scoped grounding assembly、P1 提交、两个进程的双 DB 恢复。每次回执含 plugin/fork SHA、dirty 状态和 tarball SHA-256，见本地 artifacts/integration-result.json；不是浏览器交互验收。
+- Standalone PASS：独立临时目录无 sibling checkout，`pnpm install --frozen-lockfile`、peers check、typecheck、69 tests、build、pack 全通过。首次 offline 安装因缓存缺少 dsh-code-runtime tarball 未完成，最终使用正常联网 frozen-lockfile 安装；不宣称离线交付。临时副本已删除，回执 artifacts/standalone-result.json。
+- CodeGraph：已 sync 并检查 EvidenceService、TextParser、SqliteEvidenceStore、registerCourseTools 与 LearningService 的 callers/依赖；证据路径只读 Course 元数据，学习 mutation 仍由 LearningService 拥有。索引不入 Git。
+- Harness baseline：upstream `c291e7961a515f6d7af9304e7fd1d257929aef26` / 0.1.5-rc.2，本轮集成 checkout `81310159250f879bfeb58d179dbc84462381748e`。后续发行说明 commit 不改变 runtime baseline；packages/apps 相对该 baseline **0 changes**。
+- Known blockers / unverified：环境、两仓 .env 与 Harness 用户凭证存储未发现 LLM credentials（仅 browser-session record）。real LLM smoke **NOT RUN: no credentials**；数学语义和模型面对 injection 的表现未声称通过。未执行 Node 22 版本矩阵。
+- Deferred：PDF/MinerU；OpenFile 0.1.2-rc.1（Git `39636d198993c5980da0091056d307bb5a8a48c5`）isolated strict-peer probe 与 Harness 0.1.5-rc.2 不匹配，未 force 或改 peers；outline/quiz/plan 提案、Quiz UI、Docker 均未实现，不是完整 MVP。
+- Next 3 concrete tasks：① P3 CourseOutlineDraft 验证与 publish（Concept/source ownership），让空课程进入有概念的状态；② 初始 StudyPlan 与 QuizDraft 的 validated publish，连接已验证 P1 反馈闭环；③ 凭证可用后按 golden-path 执行真实 LLM grounding/资料不足/injection semantic smoke，再进入 P4 学习 UI。
