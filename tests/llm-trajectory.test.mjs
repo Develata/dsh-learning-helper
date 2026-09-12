@@ -29,3 +29,11 @@ test('failed turns and arbitrary tools cannot pass; request secrets and raw argu
   assert.equal(result.checks.completed, false); assert.equal(result.checks.onlyExpectedTools, false);
   assert.equal(result.errorCode, 'MISSING_CREDENTIAL'); assert.ok(!JSON.stringify(result).includes('test-secret'));
 });
+
+test('a publish call alone or rejected result is not a durable publication receipt', () => {
+  const events = trajectory();
+  assert.deepEqual(projectTrajectory(events).successfulPublications, []);
+  const result = failed => ({ type: 'tool/result', seq: 4, data: { message: createToolResultMessage({ callId: 'plan', isError: failed, content: [{ type: 'text', text: '{}' }] }) } });
+  assert.deepEqual(projectTrajectory([...events, result(true)]).successfulPublications, []);
+  assert.deepEqual(projectTrajectory([...events, result(false)]).successfulPublications, ['study_plan_publish']);
+});

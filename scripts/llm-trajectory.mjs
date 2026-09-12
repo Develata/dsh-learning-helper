@@ -5,7 +5,7 @@ export const learningTools = ['course_list', 'course_search', 'course_read', 'le
 export const auxiliaryTools = ['todo_write', 'skill'];
 
 export function projectTrajectory(events) {
-  const calls = new Map(); const drafts = new Map(); const authoredQuizzes = []; const tools = []; const reads = []; const publications = []; let answer = ''; let reason; let errorCode;
+  const calls = new Map(); const drafts = new Map(); const authoredQuizzes = []; const tools = []; const reads = []; const publications = []; const successfulPublications = []; let answer = ''; let reason; let errorCode;
   for (const event of events) {
     if (event.type === 'tool/call') {
       calls.set(event.data.callId, event.data.name); tools.push(event.data.name);
@@ -15,6 +15,9 @@ export function projectTrajectory(events) {
       }
     }
     const toolResult = event.type === 'tool/result' ? event.data.message.content.find(b => b.type === 'tool-result') : undefined;
+    if (toolResult && !toolResult.isError && calls.get(toolResult.toolCallId)?.endsWith('_publish')) {
+      successfulPublications.push(calls.get(toolResult.toolCallId));
+    }
     if (toolResult && !toolResult.isError && drafts.has(toolResult.toolCallId)) {
       const draft = drafts.get(toolResult.toolCallId);
       authoredQuizzes.push({ purpose: draft.purpose, items: (draft.items ?? []).map(q => ({ prompt: q.prompt, options: q.options,
@@ -39,7 +42,7 @@ export function projectTrajectory(events) {
   const cited = [...text.matchAll(/\[([^\]]+)\]\((learning-evidence:\/\/[^\s)]+)\)/g)].map(m => ({ citationLabel: m[1], canonicalRef: m[2] }));
   const rawRefs = [...text.matchAll(/learning-evidence:\/\/[^\s)\]>]+/g)].map(m => m[0]);
   const valid = cited.every(c => reads.some(r => r.seq < answer.seq && r.canonicalRef === c.canonicalRef && r.citationLabel === c.citationLabel));
-  return { tools, reads, authoredQuizzes, answer: text, reason, errorCode, citations: cited,
+  return { tools, reads, successfulPublications, authoredQuizzes, answer: text, reason, errorCode, citations: cited,
     checks: { completed: reason === 'completed', searchUsed: tools.includes('course_search'), readUsed: reads.length > 0,
       citationsValid: valid && rawRefs.length === cited.length,
       groundedCitation: cited.length > 0 && valid && rawRefs.length === cited.length,

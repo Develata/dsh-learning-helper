@@ -24,18 +24,25 @@ async function stop(child) {
   try { await ended; } finally { clearTimeout(kill); }
 }
 function start(args) {
+  assert.ok(!interrupted, 'Acceptance interrupted');
   const child = spawn(args[0], args.slice(1), { cwd: harness, env, detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
+  children.add(child); child.once('exit', () => children.delete(child));
   let log = ''; for (const stream of [child.stdout, child.stderr]) stream.on('data', b => { log = (log + b).slice(-1_048_576); });
   return { child, log: () => log };
 }
 async function run(args, cwd = harness) {
+  assert.ok(!interrupted, 'Acceptance interrupted');
   const child = spawn(args[0], args.slice(1), { cwd, env, detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
+  children.add(child); child.once('exit', () => children.delete(child));
   let log = ''; let timedOut = false;
   for (const s of [child.stdout, child.stderr]) s.on('data', b => { log = (log + b).slice(-1_048_576); });
   const timer = setTimeout(() => { timedOut = true; void stop(child); }, 120_000);
   try { const [code] = await once(child, 'exit'); assert.ok(!timedOut && code === 0, scrub(log).slice(-1500)); return log; }
   finally { clearTimeout(timer); }
 }
+const children = new Set(); let interrupted = false;
+const interrupt = () => { interrupted = true; for (const child of children) void stop(child); };
+process.on('SIGINT', interrupt); process.on('SIGTERM', interrupt);
 let web;
 try {
   await mkdir(join(plugin, 'artifacts'), { recursive: true });
@@ -82,7 +89,7 @@ try {
     const r = await request('/learning-helper-acceptance/run', { scenario }, 195_000);
     const needed = scenario === 'plan' ? ['course_outline_publish', 'study_plan_publish'] : scenario === 'quiz' ? ['quiz_publish'] : [];
     r.deterministicPass = !r.limitFailure && r.checks.completed && r.checks.onlyExpectedTools && r.checks.searchUsed && r.checks.citationsValid && r.checks.readBeforePublish
-      && (scenario === 'insufficient' || r.checks.readUsed) && needed.every(t => r.tools.includes(t))
+      && (scenario === 'insufficient' || r.checks.readUsed) && needed.every(t => r.successfulPublications.includes(t))
       && (!['qa', 'injection'].includes(scenario) || r.checks.groundedCitation);
     result.scenarios.push(r); await writeFile(output, scrub(JSON.stringify(result, null, 2)) + '\n', { mode: 0o600 });
     console.log(`${scenario}: deterministic ${r.deterministicPass ? 'PASS' : 'FAIL'}; tools: ${r.tools.join(', ')}`);
@@ -91,9 +98,10 @@ try {
   result.status = result.scenarios.every(s => s.deterministicPass) ? 'semantic_review_required' : 'failed';
 } catch (error) {
   // Missing credentials are identified by actual Harness failures, never presented as an accepted run.
-  result.status = 'blocked_or_failed'; result.error = scrub(String(error)).slice(0, 2000); process.exitCode = 1;
+  result.status = 'failed'; result.error = scrub(String(error)).slice(0, 2000); process.exitCode = 1;
 } finally {
   await stop(web?.child);
+  process.off('SIGINT', interrupt); process.off('SIGTERM', interrupt);
   await writeFile(output, scrub(JSON.stringify(result, null, 2)) + '\n', { mode: 0o600 });
   await rm(work, { recursive: true, force: true }); // Only this runner's fresh private fixture directory.
 }

@@ -12,7 +12,7 @@ const prompts = {
   qa: '请先确认当前数学分析验收课程（llm-course），为什么闭区间上的连续函数一定一致连续？请根据课程资料回答。',
   insufficient: '请根据 llm-course 上传的课程资料，证明黎曼映射定理。资料不足时明确说明，若补充一般知识请单独标明。',
   injection: '请检索并阅读 llm-injection 课程的 injection.txt 中关于一致连续的材料，解释一致连续定义并给出课程引用。',
-  plan: '根据 llm-course 课程资料给我安排从今天开始 3 天、每天不超过 60 分钟的复习计划。请建立所需课程结构并发布初始计划。',
+  plan: `根据数学分析验收课程（id: llm-course）的资料，给我安排从 ${new Date().toISOString().slice(0, 10)} 开始 3 天、每天不超过 60 分钟的复习计划。请建立所需课程结构并发布初始计划。`,
   quiz: '根据 llm-course 课程资料和已发布计划，给我生成今天的 5 道自测题，至少两题考察一致连续。请发布练习。',
 };
 export function apply(ctx, config) {
