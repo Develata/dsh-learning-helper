@@ -33,6 +33,13 @@ test('seven actual DSH tools dispatch evidence → outline → plan → quiz →
     const published = await invoke(name, draft); assert.deepEqual((await invoke(name, draft)).value, published.value);
     assert.doesNotMatch(JSON.stringify(published.value), /correctOption|explanation/);
     assert.match(published.content.filter(c => c.type === 'text').map(c => c.text).join(''), /^UNTRUSTED COURSE EVIDENCE DATA/);
+    if (name === 'quiz_publish') {
+      const rendered = published.content.filter(c => c.type === 'text').map(c => c.text).join('');
+      assert.doesNotMatch(rendered, /sourceRefs|learning-evidence:\/\/|correctOption|explanation|"prompt"/);
+      const value = published.value as unknown as { quiz: { id: string; items: unknown[] } };
+      assert.match(rendered, new RegExp(value.quiz.id));
+      assert.equal(value.quiz.items.length, 5); // Canonical UI/PTC value remains the full public quiz.
+    }
   }
   const pub = h.store.get('authoring')!.quizzes[0]!;
   await h.service.submit('authoring', { submissionId: 'real-tool-submit', quizId: pub.id,

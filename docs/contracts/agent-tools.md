@@ -44,3 +44,5 @@ Quiz purpose 按主题描述；只有实际日期与 currentPlan.startsOn 或用
 出题前逐题求解，按最终 options 数组的 0-based 下标核对正确选项文本与 explanation；重排后重算下标。每个引用的 chunk 必须实际读取，outline 内出现 ID 不等于读过正文。Domain 校验仍只负责结构和引用，数学正确性不由 schema 保证。
 
 course_search 的模型说明明确现有 lexical contract：只搜正文，空格词为 AND，CJK 为字面 substring；先用一个短主题，语言/同义词分开调用，空结果先缩短词，不能把 filename 与整句一起当语义检索。
+
+quiz_publish 的 typed canonical value 仍为完整 public quiz，供 UI/PTC 使用；给模型的 output.render 仅包含 courseId/quizId/itemCount/openIn 发布摘要，不再重复题目与 sourceRefs。聊天仅确认题数和面板入口，独立课程问答继续严格 citation。
