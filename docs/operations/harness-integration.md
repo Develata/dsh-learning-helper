@@ -8,7 +8,7 @@ pnpm run test:integration -- /home/deve/gitclone/learning-helper
 
 要求该 Harness checkout 已完成 install/build，并满足 [COMPATIBILITY](../../COMPATIBILITY.md) 的 exact upstream 基线约束。检查包括已提交、暂存、未暂存和未跟踪的源文件；只有三份发行说明可与基线不同。修改运行时代码后必须先审查并更新基线，不能绕过检查。
 
-脚本自行 build/pack 插件，经 `dsh plugin add` 安装 tgz 到临时 Web profile，仅为生成后的 profile 添加 pnpm exact version。随后 dump config、启动两个先后独立 Web 进程，验证认证、资源、空 Course/TXT-MD 导入、真实 registry 的 course_list/search/read、grounding section、确定性提交与双 DB 重启。端口由 OS 分配；每条 Git 基线命令最多 10 秒，其他命令最多 120 秒，启动等待最多 45 秒，停止超时 5 秒终止进程组。每个子进程仅保留最近 1,048,576 个日志字符。临时 DSH_HOME 在退出时删除。
+脚本自行 build/pack 插件，经 `dsh plugin add` 安装 tgz 到临时 Web profile，仅为生成后的 profile 添加 pnpm exact version。随后 dump config、启动两个先后独立 Web 进程，验证认证、资源、空 Course/TXT-MD 导入、standard Agent 作用域中七个 tools 的 canonical dispatch、grounding section、outline/plan/quiz 发布、学生提交与双 DB 重启后的幂等恢复。端口由 OS 分配；每条 Git 基线命令最多 10 秒，其他命令最多 120 秒，启动等待最多 45 秒，停止超时 5 秒终止进程组。每个子进程仅保留最近 1,048,576 个日志字符。临时 DSH_HOME 在退出时删除。
 
 `artifacts/integration-result.json` 保存本次 running/passed/failed 状态、时间、upstream/fork/plugin SHA、插件工作区是否有修改与实际 tarball SHA-256；本次失败会替换旧成功记录。它验证 CLI/Host、真实 tool dispatch 与 Web 资源加载，不证明浏览器交互或 LLM 行为。
 
@@ -29,4 +29,4 @@ bundle 保留默认 json domain backend，只将 learning_helper 路由到 SQLit
 
 Evidence DB 路径由插件 Config.evidencePath 注入，bundle 使用 dshHomePath。不要指向 state.db；未知 schema/损坏会拒绝启动，应先保全原文件并诊断，不删除重建。processing 重启变 failed/interrupted；同内容显式重导会复用身份。若 SQLite 锁导致失败状态也无法写入，解除锁后重导可接管本 Host 已退出的导入。
 
-`tools`/`systemPrompt` 是必需公开服务；bundle 启用三只读工具，无额外 preset patch。自定义 complete system-prompt/preset 可能遮蔽该 section，必须在自己的 composition 中验证实际 assembled prompt。smoke 的临时 test probe 只供读取注册与 dispatch，不包含在 tarball 或正常 profile。
+`tools`/`systemPrompt` 是必需公开服务；bundle 启用四读、三发布工具，无额外 preset patch。自定义 complete system-prompt/preset 可能遮蔽该 section，必须在自己的 composition 中验证实际 assembled prompt。smoke 的临时 test probe 只允许这七个工具的注册检查与 dispatch，不包含在 tarball 或正常 profile。

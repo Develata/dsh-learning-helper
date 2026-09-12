@@ -8,6 +8,7 @@ pnpm run typecheck
 pnpm test
 pnpm demo
 pnpm demo:evidence
+pnpm demo:authoring
 pnpm run build
 pnpm pack --pack-destination artifacts
 codegraph sync
@@ -21,4 +22,6 @@ Harness 自身在其 checkout 执行 `pnpm install --frozen-lockfile`、`pnpm ru
 
 `pnpm demo:evidence` 在独立临时 state.db/evidence.db 中创建空课程、导入原创 lecture-03.md、检索并打印真实 citation 与全文。没有 LLM 调用。`demo/math-analysis/injection.txt` 是指令注入测试资料，仅作为不可信文本读取。所有普通 tests 均使用真实本地 DB；`tests/course-tools.test.ts` 使用正式 DSH registry dispatch。
 
-真实模型验收需要先在 Harness 配置可用 LLM 凭证（不要提交 key），通过安装本插件的 Web 会话提问“为什么闭区间上的连续函数一定一致连续？”，检查日志实际出现 search/read，答案的 machine references 必须来自该次 read。P2 本机只有 browser-session credential，无模型 credential；未执行该 semantic smoke。操作顺序与判据见 [golden path](../acceptance/golden-path.md)。
+真实模型验收需要先在 Harness 配置可用 LLM 凭证（不要提交 key），通过安装本插件的 Web 会话提问“为什么闭区间上的连续函数一定一致连续？”，检查日志实际出现 search/read，答案的 machine references 必须来自该次 read。P3 验证时本机只有 browser-session credential，无模型 credential；未执行该 semantic smoke。操作顺序与判据见 [golden path](../acceptance/golden-path.md)。
+
+`pnpm demo:authoring` 创建隔离课程/资料，使用真实 ToolRuntime dispatch search/read/outline/plan/quiz/state，经 LearningService.submit 生成 weak、review 与 v2，打印 Day 2 变化。它使用手工 draft 与答案，输出明确标识 semanticLlmRun=false。发布失败后用相同 draft 重试；outline/初始 plan 不支持覆盖，quiz 完全相同内容不生成新副本。

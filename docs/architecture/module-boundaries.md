@@ -3,8 +3,8 @@
 | 模块 | 拥有 | 可以依赖 |
 |---|---|---|
 | domain | Zod schema、实体、不变量、错误、证据限额 | zod |
-| policy | mastery/hysteresis、ReviewQueue、replan；静态 grounding 指令 | domain |
-| services | Course 创建/元数据、唯一学习状态写入口；Evidence 导入/检索/读取用例与 parser/store 端口 | domain、policy、端口 |
+| policy | mastery/hysteresis、ReviewQueue、replan；静态 grounding 指令 | domain、静态 preset guidance |
+| services | Course 创建/元数据、唯一学习状态写入口、CourseAuthoringService 提案编排；Evidence 导入/检索/读取用例与 parser/store 端口 | domain、policy、端口 |
 | providers | HarnessLearningStore；SqliteEvidenceStore；TextParser | services 端口/持久化校验、domain、公开 Harness API、Node SQLite/文件设施 |
 | host | Cordis 生命周期、认证 HTTP、输入验证与结果投影 | services、providers、tools 注册 |
 | tools | 读取/提案 Agent adapters、typed canonical output/render | services、公开 Harness tools/systemPrompt |

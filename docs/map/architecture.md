@@ -8,7 +8,12 @@
 | `src/services/evidence.ts::EvidenceService` | Course identity → hash/dedupe → parser → atomic import；只读 search/read |
 | `src/providers/text-parser.ts::TextParser` | heading-aware、lossless、bounded chunks/locators |
 | `src/providers/evidence-sqlite.ts::SqliteEvidenceStore` | 独立 schema/transaction/FTS、恢复与查询 |
-| `src/tools/course-tools.ts::registerCourseTools` | defineTool + systemPrompt.section，直接调用 application service |
+| `src/tools/course-tools.ts::registerCourseTools` | 三个 retrieval tools + 唯一 grounding section |
+| `src/tools/learning-tools.ts::registerLearningTools` | learning_state_get 与三 publish adapters；typed input/output |
+| `src/services/authoring.ts::CourseAuthoringService` | strict draft → EvidenceService.read → LearningService.publishOutline/publishInitialPlan/publishQuiz |
+| `src/domain/authoring.ts` | Draft schemas、DAG、规范化与输入数量界限 |
+| `src/presets/math-analysis/guidance.ts` | 数学分析教学 guidance，无 storage/framework |
+| `tests/authoring.test.ts` / `tests/learning-tools.test.ts` / `demo/math-analysis/authoring.ts` | grounded 发布、失败/幂等/并发与 backend 闭环 |
 | `src/policy/grounding.ts::GROUNDING_POLICY` | 静态可信 grounding 规则，不含 corpus |
 | `tests/evidence.test.ts` / `tests/course-tools.test.ts` / `tests/evidence-http.test.ts` | Evidence failure/bounds/restart、真实 registry 与 HTTP |
 | `src/services/learning.ts::LearningService.submit` | 托管答案评分 → updateConcept → adaptPlan → 一次提交 |
