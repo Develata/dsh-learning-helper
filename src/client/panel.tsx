@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { Button, Tag } from '@deepseek-ai/dsh-client-ui-primitives';
 import type { InputActions } from '@deepseek-ai/dsh-client-ui-conversation/client';
 import type { Course, Navigation, Section, Source, StudentDashboard } from './types.js';
@@ -11,8 +11,9 @@ import { QuizView } from './quiz.js';
 import { quickPrompt } from './model.js';
 const sections: [Section, string][] = [['course', '课程'], ['plan', '计划'], ['progress', '进度'], ['quiz', '练习']];
 function rememberedCourse() { try { return sessionStorage.getItem('learning-helper:selected-course') ?? ''; } catch { return ''; } }
-export function LearningPanel({ navigation, revision, inputActions, inputDraft }: { navigation: Navigation; revision: number; inputActions: InputActions; inputDraft: string }) {
-  const [selected, setSelected] = useState(rememberedCourse); const [creating, setCreating] = useState(false);
+export function LearningPanel({ navigation, revision, inputActions, inputDraft, fullscreen }: { navigation: Navigation; revision: number; inputActions: InputActions; inputDraft: string; fullscreen: boolean }) {
+  const selectorId = useId();
+  const [selected, setSelected] = useState(() => navigation.courseId ?? rememberedCourse()); const [creating, setCreating] = useState(false);
   const [reload, setReload] = useState(0);
   const state = useResource(`courses:${reload}`, signal => request<{ courses: Course[] }>('/courses', signal));
   useEffect(() => { if (navigation.courseId) { setSelected(navigation.courseId); setCreating(false); } }, [navigation.courseId, revision]);
@@ -21,8 +22,9 @@ export function LearningPanel({ navigation, revision, inputActions, inputDraft }
   // An explicit unknown target must not silently render another course.
   const course = courses.find(c => c.id === selected) ?? (!selected ? courses[0] : undefined);
   return <div className="lh-panel" aria-label="Learning Helper"><header className="lh-panel-heading"><div><div className="lh-eyebrow">LEARNING HELPER</div><h1>让每次练习都有回响</h1></div></header>
+    {!fullscreen && <p className="lh-compact-hint lh-muted">分栏空间较小时，可用右上角“全屏”专注学习。</p>}
     {state.status === 'loading' ? <Loading/> : state.status === 'error' ? <Failure message={state.error} retry={() => setReload(n => n + 1)}/> : <>
-      {!!courses.length && <div className="lh-course-select"><label>当前课程<select value={course?.id ?? ''} onChange={e => { select(e.target.value); setCreating(false); }}>
+      {!!courses.length && <div className="lh-course-select"><label htmlFor={selectorId}>当前课程<select id={selectorId} aria-label="当前课程" value={course?.id ?? ''} onChange={e => { select(e.target.value); setCreating(false); }}>
         {!course && <option value="">请选择课程</option>}{courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}</select></label>
         <Button onClick={() => setCreating(true)}>新建课程</Button></div>}
       {creating || !courses.length ? <CreateCourse onCreated={c => { select(c.id); setCreating(false); setReload(n => n + 1); }} cancel={courses.length ? () => setCreating(false) : undefined}/> :
@@ -34,6 +36,7 @@ export function LearningPanel({ navigation, revision, inputActions, inputDraft }
 function CourseWorkspace({ course, navigation, revision, inputActions, inputDraft }: { course: Course; navigation: Navigation; revision: number; inputActions: InputActions; inputDraft: string }) {
   const [section, setSection] = useState<Section>(navigation.section ?? 'plan');
   const [quizId, setQuizId] = useState(navigation.quizId ?? ''); const [refresh, setRefresh] = useState(0); const [notice, setNotice] = useState('');
+  useEffect(() => { if (!inputDraft.trim()) setNotice(''); }, [inputDraft]);
   const state = useResource(course.id, async signal => {
     const [dashboard, sources] = await Promise.all([request<StudentDashboard>(coursePath(course.id) + '/dashboard', signal),
       request<{ sources: Source[] }>(coursePath(course.id) + '/sources', signal)]);

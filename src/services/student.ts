@@ -31,10 +31,13 @@ export function studentDashboard(state: LearningAggregate) {
   const attempts = new Map(state.attempts.map(a => [a.id, a]));
   const quizzes = new Map(state.quizzes.map(q => [q.id, q]));
   const states = new Map(state.conceptStates.map(s => [s.conceptId, s]));
+  const oldTaskIds = new Set(revision ? state.plans[revision.oldVersion - 1]!.days.flatMap(d => d.tasks.map(t => t.id)) : []);
+  const recentRevisionTasks = revision ? state.plans[revision.newVersion - 1]!.days.flatMap(d =>
+    d.tasks.filter(t => !oldTaskIds.has(t.id)).map(task => ({ day: d.day, task }))) : [];
   return structuredClone({ course: state.course,
     concepts: state.concepts.map(c => ({ id: c.id, name: c.name, prerequisiteIds: c.prerequisiteIds,
       status: states.get(c.id)!.status, evidenceCount: states.get(c.id)!.evidenceCount })),
-    currentPlan: state.plans.at(-1) ?? null, recentPlanRevision: revision,
+    currentPlan: state.plans.at(-1) ?? null, recentPlanRevision: revision, recentRevisionTasks,
     recentRevisionEvidence: (revision?.evidenceAttemptIds ?? []).map(id => {
       const a = attempts.get(id)!;
       const item = quizzes.get(a.quizId)!.items.find(i => i.id === a.itemId)!;

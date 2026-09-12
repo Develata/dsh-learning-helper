@@ -6,11 +6,11 @@ Host 路由前缀 `/learning-helper/v1`：GET `/health`；GET `/courses/:courseI
 
 每条路由先经公开 `ctx.connection.requestRejection(req)` 校验 Harness 浏览器会话与 Host/Origin；未认证返回 401/unauthorized，来源拒绝返回 403/forbidden。插件不实现独立认证。普通 JSON body 最多 64 KiB，读取最多 10 秒；POST 要求 application/json。提交时间与学习日由 Host 时钟决定，客户端无法提供 correct/mastery。
 
-P4 Client：原生 right sidebar page-type Learning panel，header.actions 提供入口，不占 corner。课程设置、Plan、Progress、Quiz 共用选中课程；不建立 Session↔Course durable mapping。上传仅 Markdown/TXT（前端 512 KiB 预检，Host 最终验证）。Agent 快捷动作通过 session slot 的 inputActions.setDraft 预填 composer，学生确认发送；Browser 不调用 authoring publish。
+P4 Client：原生 right sidebar page-type Learning panel，header.actions 提供入口；空会话没有 header 时由 input.left 提供同一入口，不占 corner。课程设置、Plan、Progress、Quiz 共用选中课程；不建立 Session↔Course durable mapping。上传仅 Markdown/TXT（前端 512 KiB 预检，Host 最终验证）。Agent 快捷动作通过 session slot 的 inputActions.setDraft 预填 composer，学生确认发送；Browser 不调用 authoring publish。
 
-Student projection：GET `/courses/:courseId/dashboard` 返回 course、concepts（id/name/prerequisiteIds/status/evidenceCount）、currentPlan、recentPlanRevision、recentRevisionEvidence（真实错误 Attempt 的题目/所选选项/概念）与 quiz summaries。GET `/courses/:courseId/quizzes` 返回 `{quizzes}`，仅 id/purpose/createdAt/itemCount/submitted/submittedAt/correctCount。GET `/courses/:courseId/quizzes/:quizId/result` 返回 `{result:null}`（存在但未提交）或提交后逐题 selectedOption/correct/correctOption/explanation 与正确题数；未知课程/quiz 为 404。这些是从一个已提交 snapshot 派生的 read model，不改变 durable schema，不读 Evidence DB。
+Student projection：GET `/courses/:courseId/dashboard` 返回 course、concepts（id/name/prerequisiteIds/status/evidenceCount）、currentPlan、recentPlanRevision、recentRevisionTasks（该次修订新增的 day/task）、recentRevisionEvidence（真实错误 Attempt 的题目/所选选项/概念）与 quiz summaries。GET `/courses/:courseId/quizzes` 返回 `{quizzes}`，仅 id/purpose/createdAt/itemCount/submitted/submittedAt/correctCount。GET `/courses/:courseId/quizzes/:quizId/result` 返回 `{result:null}`（存在但未提交）或提交后逐题 selectedOption/correct/correctOption/explanation 与正确题数；未知课程/quiz 为 404。这些是从一个已提交 snapshot 派生的 read model，不改变 durable schema，不读 Evidence DB。
 
-Quiz 状态：load → answering → submitting → submitted；任何失败显示有限错误与 retry。首次提交冻结 answers + submissionId，超时重试复用同一 payload；不能在未确定结果时换答案或生成新 identity。刷新/重新进入通过 result API 恢复反馈；Host 是真值。课程切换/卸载取消旧请求并忽略过期结果。Browser 请求仅同源 cookie，AbortSignal + 有限 timeout，不保存 token。
+Quiz 状态：load → answering → submitting → submitted；任何失败显示有限错误与 retry。首次提交冻结 answers + submissionId，超时重试复用同一 payload；不能在未确定结果时换答案或生成新 identity。刷新/重新进入通过 result API 恢复反馈；Host 是真值。课程切换/卸载取消旧请求并忽略过期结果。Browser 请求仅同源 cookie，AbortSignal + 每请求 12 秒 timeout，不保存 token。
 
 普通 student-facing Quiz payload 和 quiz_publish tool card 在提交前不展示 answer key / explanation。专用 keyed tool view 接管 pending/success/error，绝不读 raw args、不提供 Inspect/Raw Input、不 fallback 到 generic raw JSON。原始 session/debug/export 仍可能包含 Agent authoring arguments，不是防作弊安全边界。Card render/replay 纯展示，按钮只导航；实际提交仅来自学生显式操作。Plan card 标明发布当时版本，打开 panel 读取最新计划，避免把旧 tool result 误称 current。
 

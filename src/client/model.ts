@@ -6,7 +6,7 @@ export function conceptNames(ids: readonly string[], concepts: StudentDashboard[
   const names = new Map(concepts.map(c => [c.id, c.name]));
   return ids.map(id => names.get(id) ?? '课程知识点').join('、');
 }
-export function taskLabel(task: NonNullable<StudentDashboard['currentPlan']>['days'][number]['tasks'][number]) {
+export function taskLabel(task: Pick<NonNullable<StudentDashboard['currentPlan']>['days'][number]['tasks'][number], 'type' | 'estimatedMinutes' | 'questionCount'>) {
   return `${taskLabels[task.type]} · ${task.estimatedMinutes} 分钟${task.questionCount ? ` · ${task.questionCount} 道题` : ''}`;
 }
 export function quickPrompt(course: Course, action: 'plan' | 'quiz' | 'review'): string {

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button, Tag } from '@deepseek-ai/dsh-client-ui-primitives';
 import type { Course, Source } from './types.js';
-import { request, coursePath, errorText } from './api.js';
+import { request, coursePath, errorText, RequestError } from './api.js';
 import { defaultExamDate, validateFile } from './model.js';
 import { Failure } from './common.js';
 export function CreateCourse({ onCreated, cancel }: { onCreated: (course: Course) => void; cancel?: (() => void) | undefined }) {
@@ -23,15 +23,19 @@ export function CreateCourse({ onCreated, cancel }: { onCreated: (course: Course
       const existing = courses.find(c => c.id === draft.id);
       const course = existing ?? (await request<{ course: Course }>('/courses', controller.signal, draft)).course;
       if (!controller.signal.aborted) onCreated(course);
-    } catch (e) { if (!controller.signal.aborted) setError(errorText(e)); }
+    } catch (e) { if (!controller.signal.aborted) {
+      // Definitive validation rejection did not commit; allow the student to correct the draft.
+      if (e instanceof RequestError && ['invalid-input', 'limit-exceeded'].includes(e.code)) pending.current = null;
+      setError(errorText(e));
+    } }
     finally { flight.current = null; if (!controller.signal.aborted) setBusy(false); }
   }
-  return <form className="lh-form" aria-label="创建课程" onSubmit={e => { e.preventDefault(); void create(); }}>
+  return <form className="lh-form" aria-label="创建课程" onChange={() => { if (!pending.current) setError(''); }} onSubmit={e => { e.preventDefault(); void create(); }}>
     <h2>开始一门课程</h2><p className="lh-muted">先准备资料，再让 Agent 帮你安排复习。</p>
     <fieldset disabled={busy || pending.current !== null}>
       <label>课程名称<input required maxLength={4000} value={title} placeholder="例如：数学分析期中复习" onChange={e => setTitle(e.target.value)}/></label>
       <label>学科<input required maxLength={4000} value={subject} onChange={e => setSubject(e.target.value)}/></label>
-      <div className="lh-form-grid"><label>考试日期（可选）<input type="date" value={exam} onChange={e => setExam(e.target.value)}/></label>
+      <div className="lh-form-grid"><label>考试日期（可选）<input type="date" max="9999-12-31" value={exam} onChange={e => setExam(e.target.value)}/></label>
         <label>每日学习分钟<input type="number" min={30} max={240} required value={minutes} onChange={e => setMinutes(Number(e.target.value))}/></label></div>
     </fieldset>
     {error && <Failure message={error} retry={() => void create()}/>}

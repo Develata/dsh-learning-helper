@@ -1,6 +1,6 @@
 import type { ToolCallBlock } from '@deepseek-ai/dsh-client-ui-conversation/client';
 import type { Navigation } from './types.js';
-import { taskLabels } from './model.js';
+import { taskLabel } from './model.js';
 export const learningToolNames = ['quiz_publish', 'study_plan_publish', 'course_outline_publish', 'learning_state_get'] as const;
 export type LearningToolName = typeof learningToolNames[number];
 const record = (v: unknown): Record<string, unknown> | null => v !== null && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : null;
@@ -37,7 +37,7 @@ export function toolCardModel(name: LearningToolName, block: ToolCallBlock): Too
           const task = record(rawTask); const type = task?.type; const minutes = count(task?.estimatedMinutes, 240);
           if ((type !== 'learn' && type !== 'review' && type !== 'practice') || !minutes) return [];
           const questions = count(task?.questionCount, 20);
-          return [`${taskLabels[type]} ${minutes} 分钟${questions ? ` / ${questions} 题` : ''}`];
+          return [taskLabel({ type, estimatedMinutes: minutes, ...(questions ? { questionCount: questions } : {}) })];
         });
         return `Day ${index + 1} · ${descriptions.join(' · ')}`;
       }), navigation: { courseId, section: 'plan' }, action: '查看当前计划' };

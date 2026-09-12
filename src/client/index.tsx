@@ -17,10 +17,10 @@ declare module '@deepseek-ai/dsh-client-ui-sidebar-right/client' {
   interface SidebarRightTabParamsMap { 'learning-helper': Navigation }
 }
 function PanelSeat({ useTabInfo, inputActions, useInput }: PropsRuntime<'sidebar.right.pane.tab'>) {
-  const { tab } = useTabInfo();
+  const { tab, sidebar } = useTabInfo();
   const draft = useInput((s: InputState) => s.draft);
-  return tab.visible ? <LearningPanel navigation={(tab.navigation.params ?? {}) as Navigation} revision={tab.navigation.revision}
-    inputActions={inputActions} inputDraft={draft}/> : null;
+  return tab.visible ? <LearningPanel key={tab.navigation.revision} navigation={(tab.navigation.params ?? {}) as Navigation} revision={tab.navigation.revision}
+    inputActions={inputActions} inputDraft={draft} fullscreen={sidebar.fullscreen}/> : null;
 }
 /** One native client plugin; every registration/style owns a Cordis disposer. */
 export function apply(ctx: Context): void {

@@ -23,6 +23,8 @@ test('student projections hide unsubmitted keys and recover feedback and revisio
   assert.equal(dashboard.currentPlan?.version, 2);
   assert.equal(dashboard.concepts.find(c => c.id === 'uniform-continuity')?.status, 'weak');
   assert.equal(dashboard.recentRevisionEvidence.length, 2);
+  assert.deepEqual(dashboard.recentRevisionTasks.map(({ day, task }) => [day, task.type, task.estimatedMinutes, task.questionCount]),
+    [[2, 'review', 20, undefined], [2, 'practice', 10, 3]]);
   assert.ok(dashboard.recentRevisionEvidence.every(e => e.quizId === quiz.id && !e.correct && e.selectedOption));
   assert.doesNotMatch(JSON.stringify(dashboard), /correctOption|explanation|NEVER_EXPOSE/);
   assert.deepEqual(dashboard.quizzes.map(q => [q.id, q.correctCount]), [[other.id, null], [quiz.id, 3]]);

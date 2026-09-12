@@ -70,3 +70,9 @@
 
 /* Keep small status text legible in both themes; the tint and words carry status. */
 .lh-panel [data-tone] { color: var(--dsw-alias-label-primary); font-size: 12px; }
+.lh-revision-actions { list-style: none; margin: 16px 0; padding: 0; }
+.lh-revision-actions li { padding: 9px 0; border-top: 1px solid var(--lh-line); }
+.lh-revision-actions li div { font-size: 12px; color: var(--lh-muted); }
+
+.lh-compact-hint { display: none; }
+@media (min-width: 768px) and (max-width: 1200px) { .lh-compact-hint { display: block; } }

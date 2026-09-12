@@ -16,8 +16,11 @@ export function PlanView({ data }: { data: StudentDashboard }) {
   if (!plan) return <div className="lh-empty"><h3>从课程资料开始</h3><p>上传讲义后，让 Agent 建立知识点与学习计划。学习时间将按你的每日预算安排。</p></div>;
   return <section aria-label="学习计划"><header className="lh-row"><h2>当前计划 <span className="lh-muted">· v{plan.version}</span></h2><Tag tone="neutral">{plan.days.length} 天</Tag></header>
     {revision && <section className="lh-revision" aria-label="为什么计划改变">
-      <div className="lh-eyebrow">WHY THIS PLAN CHANGED</div><h3>昨天的错题，改变今天的计划</h3>
+      <div className="lh-eyebrow">WHY THIS PLAN CHANGED</div><h3>错题改变了接下来的计划</h3>
       <p>计划 v{revision.oldVersion} → v{revision.newVersion}</p><p>{revision.reason}</p>
+      <ul className="lh-revision-actions">{data.recentRevisionTasks.map(({ day, task }) => <li key={task.id}>
+        <strong>Day {day} · {taskLabel(task)}</strong><div>{conceptNames(task.conceptIds, data.concepts)}</div>
+      </li>)}</ul>
       <details><summary>{data.recentRevisionEvidence.length} 条错题证据</summary><ol>{data.recentRevisionEvidence.map(e => <li key={e.attemptId}>
         <strong>{conceptNames(e.conceptIds, data.concepts)}</strong><p>{e.prompt}</p><p className="lh-muted">你的选择：{e.selectedOption} · 答错</p>
       </li>)}</ol></details>
