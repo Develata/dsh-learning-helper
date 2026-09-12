@@ -14,6 +14,8 @@ Quiz 状态：load → answering → submitting → submitted；任何失败显�
 
 普通 student-facing Quiz payload 和 quiz_publish tool card 在提交前不展示 answer key / explanation。专用 keyed tool view 接管 pending/success/error，绝不读 raw args、不提供 Inspect/Raw Input、不 fallback 到 generic raw JSON。原始 session/debug/export 仍可能包含 Agent authoring arguments，不是防作弊安全边界。Card render/replay 纯展示，按钮只导航；实际提交仅来自学生显式操作。Plan card 标明发布当时版本，打开 panel 读取最新计划，避免把旧 tool result 误称 current。
 
+中等宽度下使用 Harness 右上角原生全屏；窄于 768px 由 Harness 自动全屏，插件不实现 drawer 或改全局布局。
+
 UI 使用 Harness tokens/primitives，状态文字与颜色并用；Plan v1→v2 展示实际错误证据和当前任务（20 分钟 review / 3 题）。按 panel open、显式刷新、上传/提交后读取，不高频 polling。验收状态由 acceptance/CURRENT 拥有。
 
 POST `/courses` 接收严格 Course draft（id/title/subject/examAt?/dailyMinutes），返回 201 `{ course }`；GET `/courses` 返回 `{ courses }` 元数据列表，不含私有聚合。setup 课程 GET state 正常返回 `plan: null`。

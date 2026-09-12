@@ -23,7 +23,13 @@
 | `src/providers/storage-domain.ts::HarnessLearningStore` | bounded queue → learningDomain → KvTable.update |
 | `src/presets/math-analysis/demo.ts::demoCourse` | 显式 opt-in 自编 fixture，非 LLM/资料验收 |
 | `tests/learning.test.ts` / `tests/adaptation-boundaries.test.ts` / `tests/http.test.ts` | 状态、重规划边界与 HTTP 行为证明 |
+| `src/services/student.ts::studentDashboard/quizSummaries/quizResult` | 单 snapshot 派生安全学生读模型 |
+| `src/client/index.tsx::apply` | native client 注册、header/blank composer 入口、sidebar/tool slots |
+| `src/client/panel.tsx::LearningPanel` | 选课/分区/官方 composer 预填 → Host read models |
+| `src/client/quiz.tsx::QuizForm` | 浏览器冻结提交身份 → Host submit → result 恢复 |
+| `src/client/tool-model.ts::toolCardModel` | live/replay 安全卡片，只解析 canonical rendered result |
+| `scripts/browser-smoke.mjs` / `tests/client` | packed Harness 浏览器闭环、故障/恢复/答案隔离与 client model |
 | `scripts/harness-smoke.mjs` | 真正 packed profile install / Web restart smoke |
 | `scripts/harness-checkout.mjs` | exact upstream 基线与 fork 运行时代码差异检查 |
 
-CodeGraph 查询以上 symbol 定位源码/callers/callees，再读 [ownership](../architecture/module-boundaries.md)。Harness 查询：DomainFacility、KvTableImpl.update、WebServer.register、HostConnectionService.requestRejection；当前 tools/prompt 查询 defineTool、SystemPrompt.section；未来 UI 查询 ClientModuleRegistry、SlotCore.register、AgentPresets。
+CodeGraph 查询以上 symbol 定位源码/callers/callees，再读 [ownership](../architecture/module-boundaries.md)。Harness 查询：DomainFacility、KvTableImpl.update、WebServer.register、HostConnectionService.requestRejection；当前 tools/prompt 查询 defineTool、SystemPrompt.section；UI 查询 ClientModuleRegistry、SlotCore.register、SidebarRightService.openTab、InputActions。

@@ -31,6 +31,6 @@ Plan draft：courseId、合法 startsOn、1..14 连续 days（从 day=1 开始�
 
 幂等按规范化语义：文本 trim，aliases/prerequisites/conceptRefs/evidenceRefs 作为排序集合，outline 按 concept id 排序；days/tasks/items/options 的顺序有意义。相同 outline/initial plan 重试返回既有版本，不同第二份冲突；plan 重试即使已有 v2 仍返回原 v1。Quiz ID 是课程与完整规范化内容的 hash；完全相同内容返回同一 quiz（提交后也不生成可刷分副本），不同内容才是新 quiz，仍受 200/course 上限。重试不需要 generic ledger。
 
-Draft 的 shape/ownership 验证不能证明模型陈述或答案在数学上被资料蕴含；这由 Agent 推理和独立 semantic acceptance 验证。所有 publish 经现有学习写队列串行化，执行前/队列实际提交前检查 AbortSignal；已进入 backend durable write 时取消不保证撤销，使用同一 draft 重试取得结果。Publish tools 标记非 concurrency-safe；仅 read tools 为 true。答案 key 已存在于模型生成的 tool call arguments，P3 只保证 public API/result 不 echo key，不声称 session log 对学生隐藏。
+Draft 的 shape/ownership 验证不能证明模型陈述或答案在数学上被资料蕴含；这由 Agent 推理和独立 semantic acceptance 验证。所有 publish 经现有学习写队列串行化，执行前/队列实际提交前检查 AbortSignal；已进入 backend durable write 时取消不保证撤销，使用同一 draft 重试取得结果。Publish tools 标记非 concurrency-safe；仅 read tools 为 true。答案 key 已存在于模型生成的 tool call arguments，public API/result 不 echo key；P4 普通学生 tool cards 也不展示 arguments，原始 session/debug/export 仍不属于防作弊边界，详见 [Web UI](web-ui.md)。
 
 Authoring policy 扩展同一 grounding section：用户要求学习计划才 search/read → outline（如缺失）→ initial plan；要求 quiz 才在 outline/plan 就绪后 search/read → quiz。普通问答不授权无关 mutation，Source 中的命令从不授权发布。所有 authoring 只用课程证据/已验证 Concepts，一般知识只能用于明确分区的 QA。禁止 record_attempt、update_mastery、set_correct、raw_sql、source_db_write；本阶段不增加 study_plan_get/quiz_result_get。

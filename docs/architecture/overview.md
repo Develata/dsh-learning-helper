@@ -7,9 +7,10 @@ Agent Plane:    defineTool + grounding section → retrieval / CourseAuthoringSe
 Authoring:      Draft validation → EvidenceService.read → LearningService atomic publish
 Evidence Plane: EvidenceService → DocumentParser + EvidenceStore → evidence.db (Source/Chunk/FTS)
 Learning Plane: LearningService → domain/policy → HarnessLearningStore → state.db (learning aggregate)
+Student UI:    native dsh.client / slots → authenticated Host → student read models / submit
 Host routes:   authenticated HTTP → 对应 application service
 ```
 
 P1 答题仍按课程一次原子写 Attempt/ConceptState/ReviewQueue/StudyPlan/PlanRevision，不访问 corpus。P2 EvidenceService 只用 Course 元数据确认身份，不 clone 学习历史；资料不进入 LearningAggregate。两个数据库各自拥有原子性，没有跨库事务；来源/课程删除暂缓，避免悬空引用。
 
-依赖与写权限由 [module boundaries](module-boundaries.md) 拥有，具体存储决定见 [ADR-0003](../adr/0003-separate-evidence-store.md)。Authoring 不接触 DB；它读取 Evidence canonical refs 后交给 LearningService 发布。客户端学习界面在 P4 实现。
+依赖与写权限由 [module boundaries](module-boundaries.md) 拥有，具体存储决定见 [ADR-0003](../adr/0003-separate-evidence-store.md)。Authoring 不接触 DB；它读取 Evidence canonical refs 后交给 LearningService 发布。客户端通过 sidebar page tab 展示 Course/Plan/Progress/Quiz；tool cards 仅投影与导航，生成快捷动作只预填官方 composer。
