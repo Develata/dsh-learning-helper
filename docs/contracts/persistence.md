@@ -6,7 +6,7 @@
 
 Idempotency：submissionId 全课程唯一；同 ID 同 quiz/相同选项重试返回既有 receipt，无重复 Attempt/revision；同 ID 不同内容冲突；相同 quiz 用另一 ID 重提冲突。并发通过 provider 队列和 storage-domain update 串行化，单 Host 进程拥有该 DB；不支持多 Host 同写。
 
-Mastery：初值 0.5；正确非减、错误非增，difficulty 调整步长；最近 5 次为窗口。连续两错进入 weak；weak 需连续两对才退出。UI 只显示状态标签，非概率。ReviewQueue 由 weak 概念派生，保留实际错误证据。
+Mastery：初值 0.5；正确非减、错误非增，easy/medium/hard 步长分别为 0.1/0.15/0.2，分数限制到 [0,1]；最近 5 次为窗口。连续两错进入 weak；weak 需连续两对才退出。非 weak 时，至少 4 次证据且 mastery ≥ 0.8 为 strong，至少 2 次且 ≥ 0.6 为 okay，其余有证据为 learning、无证据为 unknown。UI 只显示状态标签，非概率。ReviewQueue 由 weak 概念派生，保留实际错误证据。
 
 Replan：只在新进入 weak 时尝试修订严格未来的下一天。加入 20 分钟 review + 3 题 practice（10 分钟），保留已完成任务，挤出/缩短未完成任务以满足每日预算。容量不足或没有未来日时保持 ReviewQueue，不伪造修订；旧计划完整保留。重复错题而仍 weak 不重复改计划。
 

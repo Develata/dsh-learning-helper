@@ -5,7 +5,7 @@
 | 分类 | 决定与源码证据（Harness checkout 相对路径） |
 |---|---|
 | UPSTREAM | bundle `dsh.bundle.patch` 与 profile：`docs/user/develop/basic/publish.md`、`apps/cli/reference/README.md`；无需 launcher patch |
-| UPSTREAM | Host `WebServer.register`：`packages/host/webserver/src/index.ts`；提供 exact/prefix route 与 disposer |
+| UPSTREAM | Host `WebServer.register`：`packages/host/webserver/src/index.ts`；提供 exact/prefix route 与 disposer；carrier 不负责全局认证，插件在路由入口调用 `packages/client/connection/src/rpc-host.ts` 的 `requestRejection` |
 | UPSTREAM | Client `dsh.client` + `./client`：`docs/subsystems/client-modules.md`、`packages/client/modules`；factory 通过 `__ModuleLoader__.load` 注册 |
 | UPSTREAM | slots / tool views：`packages/client/ui-slots`、`packages/client/ui-tool`；UI 可以独立 package face |
 | UPSTREAM | `DomainFacility.open` / `KvTable.update`：`packages/storage/storage-domain/src`；SQLite：`packages/storage/storage-sqlite/src` |
