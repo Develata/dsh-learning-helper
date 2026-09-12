@@ -7,6 +7,7 @@ import { resolve, join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { createHash } from 'node:crypto';
 import { resolveHarnessPath, verifyHarnessCheckout } from './harness-checkout.mjs';
+import { browserSmoke } from './browser-smoke.mjs';
 
 const plugin = resolve(import.meta.dirname, '..');
 const harness = resolveHarnessPath(process.argv.slice(2), join(plugin, '..', 'learning-helper'));
@@ -72,7 +73,7 @@ async function boot() {
     });
     const post = (path, body) => fetch(`${base}${path}`, { method: 'POST',
       headers: { cookie, origin: base, 'content-type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(10_000) });
-    return { child, get, post, submit, close: () => stop(child) };
+    return { child, base, cookie, get, post, submit, close: () => stop(child) };
   } catch (error) { await stop(child); throw error; }
 }
 
@@ -108,6 +109,7 @@ try {
   let first; let citationRead; let authored;
   const web = await boot();
   try {
+    if (process.env.LH_BROWSER_SMOKE !== '0') { await browserSmoke({ web, harness, plugin, work }); receipts.push('real browser: native Learning panel and student learning loop'); }
     const course = await web.post('/learning-helper/v1/courses', { id: 'evidence-smoke', title: '数学分析', subject: 'calculus', dailyMinutes: 60 });
     assert.equal(course.status, 201);
     assert.equal((await (await web.get('/learning-helper/v1/courses/evidence-smoke/state')).json()).plan, null);
