@@ -1,9 +1,11 @@
 import { z } from 'zod';
+import { createHash } from 'node:crypto';
+import type { StudyPlanDraft } from '../domain/authoring.js';
 import { submissionSchema, idSchema, createCourseSchema } from '../domain/model.js';
 import { learningStateSchema } from './state-schema.js';
-import type { LearningAggregate, Submission, Receipt, Course } from '../domain/model.js';
+import type { LearningAggregate, Submission, Receipt, Course, Concept, Quiz, StudyPlan } from '../domain/model.js';
 import { LearningError } from '../domain/errors.js';
-import { adaptPlan, updateConcept } from '../policy/adaptation.js';
+import { adaptPlan, updateConcept, initialConceptState } from '../policy/adaptation.js';
 
 /** Atomic aggregate persistence; providers serialize transforms and commit before resolving. */
 export interface LearningStore {
@@ -20,7 +22,16 @@ function parse<T>(schema: z.ZodType<T>, input: unknown): T {
 }
 const normalized = (s: Submission) => JSON.stringify({ quizId: s.quizId, answers: [...s.answers].sort((a, b) => a.itemId.localeCompare(b.itemId)) });
 
-/** The only learning-state mutation owner. Clock is supplied once per submission by the Host. */
+const identity = (prefix: string, value: unknown) => `${prefix}_${createHash('sha256').update(JSON.stringify(value)).digest('hex')}`;
+const semanticConcepts = (concepts: Concept[]) => [...concepts].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0).map(c => ({
+  id: c.id, courseId: c.courseId, name: c.name, aliases: [...c.aliases].sort(),
+  prerequisiteIds: [...c.prerequisiteIds].sort(), sourceRefs: [...c.sourceRefs].sort(),
+}));
+const planContent = (p: StudyPlan) => ({ courseId: p.courseId, startsOn: p.startsOn,
+  days: p.days.map(d => ({ day: d.day, tasks: d.tasks.map(({ id: _id, status: _status, ...t }) => t) })) });
+const publicQuiz = (q: Quiz) => ({ ...q, items: q.items.map(({ correctOption: _key, explanation: _explanation, ...item }) => item) });
+
+/** The only learning-state mutation owner. Host clock supplies timestamps for each write use case. */
 export class LearningService {
   constructor(private readonly store: LearningStore, private readonly clock: () => Date = () => new Date()) {}
   async create(input: unknown): Promise<void> { await this.store.create(parse(learningStateSchema, input)); }
@@ -52,7 +63,72 @@ export class LearningService {
     const s = this.requireCourse(courseId);
     const q = s.quizzes.find(q => q.id === quizId);
     if (!q) throw new LearningError('not-found', 'Quiz not found');
-    return structuredClone({ ...q, items: q.items.map(({ correctOption: _key, explanation: _explanation, ...item }) => item) });
+    return structuredClone(publicQuiz(q));
+  }
+  /** Same-process input has already passed authoring schema and Evidence ownership validation. */
+  async publishOutline(courseId: string, concepts: Concept[], signal: AbortSignal) {
+    signal.throwIfAborted();
+    const owned = semanticConcepts(concepts);
+    const state = await this.store.update(courseId, current => {
+      signal.throwIfAborted();
+      this.active(current);
+      if (current.concepts.length) {
+        if (JSON.stringify(semanticConcepts(current.concepts)) !== JSON.stringify(owned)) throw new LearningError('conflict', 'Course outline already published with different content');
+        return current;
+      }
+      current.concepts = owned;
+      current.conceptStates = owned.map(c => initialConceptState(courseId, c.id));
+      return current;
+    });
+    return { courseId, concepts: state.concepts };
+  }
+  /** Publishes only v1; identical retries return that v1 even after deterministic adaptation. */
+  async publishInitialPlan(draft: StudyPlanDraft, signal: AbortSignal) {
+    signal.throwIfAborted();
+    const owned = structuredClone(draft);
+    const state = await this.store.update(owned.courseId, current => {
+      signal.throwIfAborted(); this.active(current);
+      if (!current.concepts.length) throw new LearningError('conflict', 'Publish course outline before initial plan');
+      this.conceptRefs(current, owned.days.flatMap(d => d.tasks.flatMap(t => t.conceptIds)));
+      if (owned.days.some(d => d.tasks.reduce((n, t) => n + t.estimatedMinutes, 0) > current.course.dailyMinutes)) throw new LearningError('invalid-input', 'Plan exceeds daily course budget');
+      const initial = current.plans[0];
+      if (initial) {
+        if (JSON.stringify(planContent(initial)) !== JSON.stringify(owned)) throw new LearningError('conflict', 'Initial plan already published with different content');
+        return current;
+      }
+      current.plans.push({ ...owned, id: identity('plan', owned), version: 1, createdAt: this.publishTime(current),
+        days: owned.days.map(d => ({ day: d.day, tasks: d.tasks.map((t, i) => ({ ...t, id: `day-${d.day}-task-${i + 1}`, status: 'pending' as const })) })) });
+      return current;
+    });
+    return { courseId: owned.courseId, plan: state.plans[0]! };
+  }
+  /** Persists the key but returns the same public projection used by the student Quiz API. */
+  async publishQuiz(content: Omit<Quiz, 'id' | 'createdAt'>, signal: AbortSignal) {
+    signal.throwIfAborted();
+    const owned = structuredClone(content); const quizId = identity('quiz', owned);
+    const state = await this.store.update(owned.courseId, current => {
+      signal.throwIfAborted(); this.active(current);
+      if (!current.concepts.length || !current.plans.length) throw new LearningError('conflict', 'Publish outline and initial plan before quiz');
+      this.conceptRefs(current, owned.items.flatMap(i => i.conceptIds));
+      if (current.quizzes.some(q => q.id === quizId)) return current;
+      if (current.quizzes.length >= 200) throw new LearningError('limit-exceeded', 'Quiz capacity reached');
+      current.quizzes.push({ ...owned, id: quizId, createdAt: this.publishTime(current) });
+      return current;
+    });
+    return { courseId: owned.courseId, quiz: publicQuiz(state.quizzes.find(q => q.id === quizId)!) };
+  }
+  private active(state: LearningAggregate): void {
+    if (state.course.status !== 'active') throw new LearningError('conflict', 'Course is archived');
+  }
+  private conceptRefs(state: LearningAggregate, ids: string[]): void {
+    const known = new Set(state.concepts.map(c => c.id));
+    if (ids.some(id => !known.has(id))) throw new LearningError('invalid-input', 'Unknown course concept');
+  }
+  private publishTime(state: LearningAggregate): string {
+    const now = this.clock().toISOString();
+    const latest = [state.course.createdAt, state.plans.at(-1)?.createdAt, state.quizzes.at(-1)?.createdAt, state.attempts.at(-1)?.submittedAt];
+    if (latest.some(t => t && Date.parse(now) < Date.parse(t))) throw new LearningError('conflict', 'Host clock moved backwards');
+    return now;
   }
   async submit(courseId: string, input: unknown) {
     parse(idSchema, courseId);
