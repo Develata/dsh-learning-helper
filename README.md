@@ -80,6 +80,6 @@ pnpm acceptance:llm -- /absolute/path/to/learning-helper
 
 ## v0.1 限制
 
-仅 TXT/Markdown；PDF/MinerU/OpenFile 延后。单用户、本机部署；未提供多用户、外部 PKM、FSRS 或向量服务。普通学生界面和工具卡片在提交前隐藏答案，但原始 session/debug/export 仍可能保留 Agent arguments，不是考试防作弊边界。Quiz 主要显示文本；长篇数学讲解沿用 Harness chat renderer。
+仅 TXT/Markdown；PDF/MinerU/OpenFile 延后。引用/结构校验不等于数学正确性证明，模型输出仍需判断。单用户、本机部署；未提供多用户、外部 PKM、FSRS 或向量服务。普通学生界面和工具卡片在提交前隐藏答案，但原始 session/debug/export 仍可能保留 Agent arguments，不是考试防作弊边界。Quiz 主要显示文本；长篇数学讲解沿用 Harness chat renderer。固定 Harness 的已知传递依赖 advisory 与适用范围见 [发布审查](docs/acceptance/final-delivery.md)，不支持公网共享部署。
 
 业务仓库：[dsh-learning-helper](https://github.com/Develata/dsh-learning-helper)；thin fork：[learning-helper](https://github.com/Develata/learning-helper)。[MIT](LICENSE) · [第三方说明](THIRD_PARTY_NOTICES.md) · [Docs control plane](docs/README.md)。

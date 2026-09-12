@@ -20,7 +20,7 @@
 | Evidence 原子写与恢复 | verified | SQLite trigger/lock 失败无部分 chunks；显式 retry；stale processing、损坏/版本拒绝；新 Node/Harness 进程回读一致 | 重启 |
 | 三个真实 DSH 只读 tools | verified | tests/course-tools.test.ts；packed profile 中 standard Agent-scoped dispatch + canonical output + grounding assembly | Agent retrieval |
 | Grounded QA 的工具与引用路径 | verified | course_search → course_read → citation 逐一映射；instruction-like fixture 保持不可信数据，学习 DB 不变 | 证据问答基础 |
-| 真实 LLM 数学/抗注入语义 | planned | NOT RUN：本机无模型凭证，不能把 deterministic/policy tests 称为真实 Agent semantic 验收 | LLM 回答 |
+| 真实 LLM 数学/抗注入/authoring 语义 | verified | 官方 Harness + newapi/gpt-5.6-luna；五场景真实工具轨迹、精确引用、全部作者引用已读、逐题/证明复核；[final acceptance](final-delivery.md) | LLM 回答与生成 |
 | PDF / MinerU / OpenFile | deferred | TXT/MD 已足够闭环；OpenFile strict-peer probe 不通过，P4 未改变此结论 | 后续导入 |
 | Grounded outline / DAG / unknown 初始化 | verified | tests/authoring.test.ts：合法发布、循环/未知先修/跨课/无证据拒绝、语义重试/并发单赢家 | 概念提案 |
 | 初始 StudyPlan | verified | 1..14 天、预算/任务上限、pending/v1 派生；不同重发冲突，v2 后重试仍返回原 v1 | 计划提案 |
@@ -35,4 +35,4 @@
 | 普通 UI 答案隔离 / replay | verified | public payload、DOM、真实 quiz_publish card 的 correctOption=2/秘密 explanation 不泄漏；tests/client 覆盖 pending/error/坏结果；原始 session/export 不在边界内 | 提交前 |
 | Client 失败与取消 | verified | 创建明确拒绝后可编辑；source/dashboard/submit 失败可重试；旧课程延迟响应不污染新课程；12 秒 timeout/abort model tests | 恢复 |
 | 视觉与响应式 | verified | 1440/1024/390 截图人工自审、light/dark、长中英文知识点无横向溢出；1024 使用原生全屏，390 自动全屏 | 学生体验 |
-| pinned Docker delivery | planned | P5 | cold boot |
+| pinned Docker delivery | verified | 固定 SHA/image digest；无缓存 build、新 volume、Chromium、restart/auth/Origin；最终 pin 见 fork 发行记录 | cold boot |

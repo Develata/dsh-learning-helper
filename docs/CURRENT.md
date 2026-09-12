@@ -1,18 +1,10 @@
 # 当前状态
 
-- Current phase：P4 Student-Facing Web UX Hard Gate 已通过。P1–P3 保持原有后端/两库/七工具；新增原生 Learning panel，把课程创建/上传、练习提交、反馈与 weak→review→v2 变成真实浏览器路径。下一阶段 P5 final delivery。
-- Last known good implementation commit：`4d672023140fe9f3ea2a97f19db1be888a39bfc8`，包含 client、学生投影、review fixes 与 assembled browser smoke。最终插件版本为本文件所在提交（git rev-parse HEAD）；fork 的 UPSTREAM_BASE.md pin 最终已测试且已 push 的插件 SHA，避免自引用 SHA。
-- What works：exports["./client"] / dsh.client manifest、dist/client.js 当前 factory contract；native sidebar page tab、header.actions/空会话 composer 入口；Course 创建/选择、MD/TXT 文件选择/Ready/chunk 数/去重；Plan、Progress、Quiz 与刷新恢复。快捷动作仅预填官方 inputActions composer，学生确认发送后由 Agent authoring；Browser 不直接 publish。
-- Student projections：dashboard、quiz summaries、提交后 result 来自单个学习 snapshot，未新增 durable schema，也不读取 Evidence corpus。Why changed 展示旧→新版本、真实两条错题证据与新增 Day 2 20 分钟 review / 3 题 practice。首次提交冻结 identity/answers，失败或丢失响应用同一 payload 重试。
-- Answer-key boundary：普通 student-facing Quiz payload/DOM 与专用 quiz_publish tool card 在提交前不显示 correctOption/explanation；pending/error/不认识的历史结果均保持安全展示。原始 session/debug/export 仍可能包含 Agent authoring arguments，不是考试防作弊边界。四类 tool cards 的 live/replay 都没有写入副作用，按钮只导航；发布时 v1 与当前 v2 明确区分。
-- Review fixes：已修复刷新导致局部表单状态丢失、导航出现旧课程状态、空会话入口/重复入口、课程选择器可访问名称、创建被明确拒绝后表单锁定；统一 tool/panel 任务格式，将新增复习任务放在 Why changed 顶部。实际失败、丢失响应、取消与刷新测试后复审，当前 P4 scope 未发现未修复的 correctness failure。
-- Last verification（2026-09-12，Node 24.18.0 / pnpm 11.7.0）：typecheck PASS；tests **94/94**（87 backend + 7 client，P3 85 tests 无回归）；build PASS；pnpm demo / demo:evidence / demo:authoring PASS；pack PASS；git diff --check PASS。三个 demo 都是 deterministic，authoring demo 使用真实 ToolRuntime。
-- Packed Harness integration PASS：prebuilt tgz install、config dump、client discovery/Web boot、authenticated Host/API、standard Agent scope 七工具与 grounding assembly、P1–P3 发布/提交、两个 Host 进程的双库恢复和幂等。当前运行回执 artifacts/integration-result.json 记录实际 SHA、dirty 与 tarball SHA-256。
-- Browser / visual PASS：Harness 自带 Playwright 1.61.1 + Chromium headless shell 149.0.7827.55；真实 create/upload/Ready、官方 composer 预填、真实 registry/session tool cards、public payload/DOM key 隔离（correctOption=2 fixture）、键盘选项、提交失败与响应丢失重试、反馈/Weak/v2/20min/3题、刷新恢复、source/dashboard 错误重试、切课旧响应取消。1440/1024/390、light/dark、长中文与数学概念名截图自审，无横向溢出/页面异常；artifacts/browser 不提交。LLM 在该测试中由确定性工具输入替代，未把它称为模型行为验收。
-- Known visual limits：Harness 在约 1024px 默认三栏会压缩聊天，已提示并测试原生手动全屏；390px 原生自动全屏。Quiz 当前显示普通文本，长篇数学讲解沿用 Harness chat renderer；citation deep-link 未实现，不属于本阶段 Hard Gate。
-- Standalone PASS：无 sibling checkout 的临时副本 install --frozen-lockfile、peers check、typecheck、94 tests、build、pack 全通过；使用当前实现与依赖，没有 force/override，副本已移除。运行回执 artifacts/standalone-result.json；后续仅更新文档状态。
-- CodeGraph：已 sync 并检查 client apply→LearningPanel/QuizForm、toolCardModel、studentDashboard→LearningService、原有 submit→policy/store 影响；唯一学习 mutation owner 仍是 LearningService，client 无 Host runtime/private API。索引不入 Git。
-- Harness baseline：upstream `c291e7961a515f6d7af9304e7fd1d257929aef26` / 0.1.5-rc.2；P4 验证 fork `976e161b99136103ec6a64f8cc31f9d64f1bc5d1`，随后只更新发行元数据。packages/apps 相对 upstream **0 changes**，未同步新 upstream。
-- Known blockers / unverified：real LLM semantic smoke **NOT RUN: no credentials**。本轮检查模型 key 环境变量/两仓 .env 无凭证；credentials store 只有 client-connection/browser-session。自主工具选择、数学质量与抗注入语义仍未证明；P5 final acceptance 前必须运行真实模型 search/read/citation，最好覆盖 authoring。Node 22 矩阵未运行。
-- Deferred：PDF/MinerU/OpenFile（沿用 P2 不兼容结果，P4 未重做 probe）、Docker/pinned final profile、额外外部集成。
-- Next 3 concrete tasks：① 配置模型后执行真实 grounding/authoring/资料不足/injection semantic acceptance；② 用原生学习 UI 录制 2–3 分钟课程演示，检查模型产题及数学展示；③ 完成 exact SHA 版本锁、Docker/profile 与 cold-boot 最终交付验收。
+- Current phase：P5 / v0.1 feature freeze。实现与验收完成；不启动 P6。最终部署 pin、镜像与远端发布回执由 fork 的 UPSTREAM_BASE / deploy/learning-helper 拥有。
+- Last known good code：`21d71591ac4f24f2acb48259722005a260280dcd`（随后仅冻结文档）。Harness runtime 固定 `c291e7961a515f6d7af9304e7fd1d257929aef26` / 0.1.5-rc.2，packages/apps 0 patch；Node 24.18.0、pnpm 11.7.0。
+- What works：TXT/MD → Evidence → grounded outline/plan/quiz → 作答 → deterministic Attempt/Weak/ReviewQueue/v2；原生 Learning panel、反馈、Why changed、重试/刷新/双库重启。完整能力见 [matrix](acceptance/matrix.md)。
+- Real LLM：2026-09-12，官方 Harness Agent + packed plugin，`newapi / gpt-5.6-luna`；QA、资料不足、实际读取注入资料、outline/3-day plan/5-item quiz 全部通过程序与逐项语义检查。真实轨迹与数学检查在本机 artifacts/llm-acceptance.json；不是 mock。语义范围见 [final acceptance](acceptance/final-delivery.md)。
+- Deployment：固定源码/image digest 的 multi-stage Docker；全新 volume / no-cache build / Chromium / restart persistence / auth+Origin 通过。non-root、loopback byte bridge、预构建 profile，启动不 install。最终 plugin SHA 推送后再由 fork 锁定并复验同一发行路径。
+- Verification（2026-09-12）：typecheck；100 tests（92 backend/script + 8 client）；build；三个 demo；pack；packed Harness + Chromium；无 sibling install/peers/typecheck/tests/build/pack；CodeGraph sync；diff/secret/license/audit review。1440 light/dark、1024、390、键盘/长中文/错误态已自审。
+- Known limits：TXT/MD only，单用户本机；Quiz 普通文本，citation deep-link 未交付。普通 UI 提交前隐藏 key，但 raw session/debug/export 不是考试安全边界。模型质量仍需判断；样例验收不保证未来每次生成。固定 Harness runtime 有 24 条已分类 advisory，未盲目升级；见 final acceptance。没有已确认的本轮范围内遗留 correctness failure。
+- Next 3 tasks：① 按 [DEMO](DEMO.md) 录制真实课程演示；② 提交固定版本及两仓地址；③ 完成课程验收后，再由用户决定是否长期维护。PDF/外部集成/FSRS/多用户 deferred。

@@ -1,6 +1,6 @@
 # Golden path
 
-完整自主 Agent 课程验收（模型语义仍 planned）：打开 Learning Helper → 创建课程 → 上传小型资料并完成解析 → Agent 提议 outline → 输入 3 天/每天 60 分钟 → 生成计划 → 询问“为什么闭区间上的连续函数一定一致连续？” → 根据资料回答并附 citation/excerpt → 生成并打开 Day 1 的 5 题 quiz → 故意错两道一致连续 → 提交 → 确定性评分 → 持久化 Attempts → weak → ReviewQueue → replan → Day 2 新计划 → UI 解释两道错题如何导致 20 分钟复习 + 3 题。Day 3 mock 为 optional。
+课程 Golden path（真实模型与确定性浏览器分别验证，范围见 [final acceptance](final-delivery.md)）：打开 Learning Helper → 创建课程 → 上传小型资料并完成解析 → Agent 提议 outline → 输入 3 天/每天 60 分钟 → 生成计划 → 询问“为什么闭区间上的连续函数一定一致连续？” → 根据资料回答并附 citation/excerpt → 生成并打开 Day 1 的 5 题 quiz → 故意错两道一致连续 → 提交 → 确定性评分 → 持久化 Attempts → weak → ReviewQueue → replan → Day 2 新计划 → UI 解释两道错题如何导致 20 分钟复习 + 3 题。Day 3 mock 为 optional。
 
 P1 确定性子路径：固定 5 题 fixture，Uniform Continuity 两错；assert weak、队列 concept/evidence、oldVersion=1/newVersion=2、Day 2 review 20min / practice 3 题、预算不超过 60；相同提交重试无重复，SQLite 重新打开后所有状态仍在。它不证明上传、Agent 推理或浏览器交互。
 
@@ -18,7 +18,7 @@ P3 Golden Backend Path（确定性与真实工具 dispatch 已验证）：新建
 
 证据：tests/authoring.test.ts、tests/learning-tools.test.ts、pnpm demo:authoring，以及 scripts/harness-smoke.mjs 的 prebuilt tgz + standard preset Agent dispatch + HTTP student submit + 两个真实 Host 进程。fixture draft 是手工确定性输入；它证明 backend 连接，不证明 LLM 自主生成提案。
 
-真实 LLM semantic acceptance（未运行：无模型凭证；P5 final acceptance 前必须完成）：在安装本插件的 Harness 会话问“为什么闭区间上的连续函数一定一致连续？”。记录 provider/model（不记录 key）、实际 tool call 次序与已读 canonicalRef。检查假设闭区间+连续、结论一致连续、证明有效、直觉与证明区分、每个课程 citation 均来自该次 read，不能虚构页码。再导入 injection.txt，确认无删除或无关发布行为、仍使用 citations；资料不足的问题必须明确一般知识与课程证据的区别。P3 authoring semantic 再要求模型依用户请求自主 search/read → outline → plan → quiz，核对引用、先修顺序、预算、单一正确答案；只问定理时不得自行发布。
+真实 LLM semantic acceptance（P5 已通过；provider/model、数学检查与观察范围由 final acceptance 拥有）：在安装本插件的 Harness 会话问“为什么闭区间上的连续函数一定一致连续？”。记录 provider/model（不记录 key）、实际 tool call 次序与已读 canonicalRef。检查假设闭区间+连续、结论一致连续、证明有效、直觉与证明区分、每个课程 citation 均来自该次 read，不能虚构页码。再导入 injection.txt，确认无删除或无关发布行为、仍使用 citations；资料不足的问题必须明确一般知识与课程证据的区别。P3 authoring semantic 再要求模型依用户请求自主 search/read → outline → plan → quiz，核对引用、先修顺序、预算、单一正确答案；只问定理时不得自行发布。
 
 
 P4 Golden Browser Path（确定性 authoring + 实际浏览器已验证）：
