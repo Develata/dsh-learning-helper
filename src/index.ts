@@ -9,6 +9,8 @@ import { demoCourse } from './presets/math-analysis/demo.js';
 import { SqliteEvidenceStore } from './providers/evidence-sqlite.js';
 import { TextParser } from './providers/text-parser.js';
 import { EvidenceService } from './services/evidence.js';
+import { CourseAuthoringService } from './services/authoring.js';
+import { registerLearningTools } from './tools/learning-tools.js';
 import { registerCourseTools } from './tools/course-tools.js';
 
 export const name = 'learning-helper';
@@ -29,4 +31,5 @@ export async function apply(ctx: Context, config: Config): Promise<void> {
   ctx.effect(() => ctx.webServer.register({ kind: 'prefix', path: '/learning-helper/v1',
     handler: createHandler(service, error => ctx.logger.error(error), req => ctx.connection.requestRejection(req), evidence) }));
   registerCourseTools(ctx, service, evidence);
+  registerLearningTools(ctx, new CourseAuthoringService(service, evidence));
 }
