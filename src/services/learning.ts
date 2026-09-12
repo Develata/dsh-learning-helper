@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { createHash } from 'node:crypto';
+import { studentDashboard, quizSummaries, quizResult } from './student.js';
 import type { StudyPlanDraft } from '../domain/authoring.js';
 import { submissionSchema, idSchema, createCourseSchema } from '../domain/model.js';
 import { learningStateSchema } from './state-schema.js';
@@ -64,6 +65,14 @@ export class LearningService {
     const q = s.quizzes.find(q => q.id === quizId);
     if (!q) throw new LearningError('not-found', 'Quiz not found');
     return structuredClone(publicQuiz(q));
+  }
+  getDashboard(courseId: string) { return studentDashboard(this.requireCourse(courseId)); }
+  listQuizzes(courseId: string) { return quizSummaries(this.requireCourse(courseId)); }
+  getQuizResult(courseId: string, quizId: string) {
+    const state = this.requireCourse(courseId);
+    const quiz = state.quizzes.find(q => q.id === quizId);
+    if (!quiz) throw new LearningError('not-found', 'Quiz not found');
+    return quizResult(state, quiz);
   }
   /** Same-process input has already passed authoring schema and Evidence ownership validation. */
   async publishOutline(courseId: string, concepts: Concept[], signal: AbortSignal) {

@@ -66,10 +66,13 @@ export function createHandler(service: LearningService, log: (error: unknown) =>
         }
         send(res, 405, { error: { code: 'invalid-input', message: 'Method not allowed' } }); return;
       }
-      const match = /^\/learning-helper\/v1\/courses\/([a-zA-Z0-9_-]+)\/(state|submissions|quizzes\/([a-zA-Z0-9_-]+))$/.exec(path);
+      const match = /^\/learning-helper\/v1\/courses\/([a-zA-Z0-9_-]+)\/(state|dashboard|submissions|quizzes(?:\/([a-zA-Z0-9_-]+)(\/result)?)?)$/.exec(path);
       if (!match) { send(res, 404, { error: { code: 'not-found', message: 'Route not found' } }); return; }
       const courseId = match[1]!;
       if (req.method === 'GET' && match[2] === 'state') { send(res, 200, service.getState(courseId)); return; }
+      if (req.method === 'GET' && match[2] === 'dashboard') { send(res, 200, service.getDashboard(courseId)); return; }
+      if (req.method === 'GET' && match[2] === 'quizzes') { send(res, 200, { quizzes: service.listQuizzes(courseId) }); return; }
+      if (req.method === 'GET' && match[3] && match[4]) { send(res, 200, { result: service.getQuizResult(courseId, match[3]) }); return; }
       if (req.method === 'GET' && match[3]) { send(res, 200, service.getQuiz(courseId, match[3])); return; }
       if (req.method === 'POST' && match[2] === 'submissions') { send(res, 200, await service.submit(courseId, await readBody(req))); return; }
       send(res, 405, { error: { code: 'invalid-input', message: 'Method not allowed' } });
