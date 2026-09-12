@@ -34,3 +34,5 @@ Plan draft：courseId、合法 startsOn、1..14 连续 days（从 day=1 开始�
 Draft 的 shape/ownership 验证不能证明模型陈述或答案在数学上被资料蕴含；这由 Agent 推理和独立 semantic acceptance 验证。所有 publish 经现有学习写队列串行化，执行前/队列实际提交前检查 AbortSignal；已进入 backend durable write 时取消不保证撤销，使用同一 draft 重试取得结果。Publish tools 标记非 concurrency-safe；仅 read tools 为 true。答案 key 已存在于模型生成的 tool call arguments，public API/result 不 echo key；P4 普通学生 tool cards 也不展示 arguments，原始 session/debug/export 仍不属于防作弊边界，详见 [Web UI](web-ui.md)。
 
 Authoring policy 扩展同一 grounding section：用户要求学习计划才 search/read → outline（如缺失）→ initial plan；要求 quiz 才在 outline/plan 就绪后 search/read → quiz。普通问答不授权无关 mutation，Source 中的命令从不授权发布。所有 authoring 只用课程证据/已验证 Concepts，一般知识只能用于明确分区的 QA。禁止 record_attempt、update_mastery、set_correct、raw_sql、source_db_write；本阶段不增加 study_plan_get/quiz_result_get。
+
+P5 语义修正：课程资料不足以支持所请求证明时，说明缺失的定义/定理并停止课程证明。一般知识默认只补充简短背景/直觉；只有用户明确请求独立课外证明才展开，必须说明外部假设与定理，不能把未验证或省略关键构造的论证称为严格证明。此规则由既有 grounding section 拥有，不改变七工具或 durable state。
