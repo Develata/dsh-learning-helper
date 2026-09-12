@@ -30,6 +30,7 @@
 | `src/client/tool-model.ts::toolCardModel` | live/replay 安全卡片，只解析 canonical rendered result |
 | `scripts/browser-smoke.mjs` / `tests/client` | packed Harness 浏览器闭环、故障/恢复/答案隔离与 client model |
 | `scripts/harness-smoke.mjs` | 真正 packed profile install / Web restart smoke |
+| `scripts/acceptance-llm.mjs` / `scripts/llm-probe.mjs` / `scripts/llm-trajectory.mjs` | 临时 packed profile → 真实 Harness Agent → sanitized 引用/发布回执；仅验收用 |
 | `scripts/harness-checkout.mjs` | exact upstream 基线与 fork 运行时代码差异检查 |
 
 CodeGraph 查询以上 symbol 定位源码/callers/callees，再读 [ownership](../architecture/module-boundaries.md)。Harness 查询：DomainFacility、KvTableImpl.update、WebServer.register、HostConnectionService.requestRejection；当前 tools/prompt 查询 defineTool、SystemPrompt.section；UI 查询 ClientModuleRegistry、SlotCore.register、SidebarRightService.openTab、InputActions。
