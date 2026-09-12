@@ -18,6 +18,13 @@ flowchart LR
 
 核心演示：一致连续连续答错两题 → **Weak** → 复习队列 → 计划 **v1 → v2** → 明天增加 **20 分钟复习 + 3 道针对题**。学生能够看到计划为什么改变。
 
+<p>
+  <img src="docs/images/quiz.png" width="360" alt="学生选择五题练习的选项，提交前没有答案解释" />
+  <img src="docs/images/plan.png" width="360" alt="计划 v2 显示两次一致连续错题以及新增的 20 分钟复习和 3 道练习" />
+</p>
+
+真实 Harness 浏览器截图；课程与答题数据来自确定性演示 fixture。
+
 ## 学习体验
 
 - 创建/选择课程，上传 TXT/Markdown，查看就绪状态与去重结果。
