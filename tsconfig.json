@@ -10,6 +10,9 @@
     "verbatimModuleSyntax": true,
     "types": [
       "node"
+    ],
+    "lib": [
+      "ES2024", "DOM"
     ]
   },
   "include": [
