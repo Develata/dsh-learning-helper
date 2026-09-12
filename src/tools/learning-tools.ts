@@ -10,6 +10,11 @@ const concepts = { type: 'array', required: true, items: { type: 'object', addit
   properties: { ...conceptProperties, courseId: str, sourceRefs: strings } } } as const;
 const taskProperties = { type: { type: 'string', enum: ['learn', 'review', 'practice'], required: true },
   conceptIds: strings, estimatedMinutes: int, reason: str, questionCount: { type: 'integer', description: 'Only for practice: integer 1–20. For learn/review OMIT this field entirely; do not send 0 or null.' } } as const;
+const { questionCount: practiceCount, ...studyTaskProperties } = taskProperties;
+const taskDraft = { oneOf: [
+  { type: 'object', additionalProperties: false, properties: { ...studyTaskProperties, type: { type: 'string', enum: ['learn', 'review'], required: true } } },
+  { type: 'object', additionalProperties: false, properties: { ...studyTaskProperties, type: { type: 'string', const: 'practice', required: true }, questionCount: practiceCount } },
+] } as const;
 const tasks = { type: 'array', required: true, items: { type: 'object', additionalProperties: false,
   properties: { ...taskProperties, id: str, status: { type: 'string', enum: ['pending', 'done'], required: true } } } } as const;
 const plan = { type: 'object', additionalProperties: false, properties: {
@@ -69,7 +74,7 @@ export function registerLearningTools(ctx: Context, authoring: CourseAuthoringSe
   ctx.effect(() => ctx.tools.register(defineTool({
     name: 'study_plan_publish', description: 'Publish only the initial study plan after the grounded outline exists and the user requests a plan. startsOn: YYYY-MM-DD; 1–14 contiguous days starting at 1, 1–50 tasks/day, within dailyMinutes. Each task uses known concepts, 1–240 minutes; optional questionCount 1–20 only for practice. Host sets pending/version/IDs/time. Same retry returns v1 even after automatic v2; cannot overwrite adaptation.',
     parameters: { courseId: str, startsOn: str, days: { type: 'array', required: true, items: { type: 'object', additionalProperties: false,
-      properties: { day: int, tasks: { type: 'array', required: true, items: { type: 'object', additionalProperties: false, properties: taskProperties } } } } } },
+      properties: { day: int, tasks: { type: 'array', required: true, items: taskDraft } } } } },
     output: { schema: { type: 'object', additionalProperties: false, properties: { courseId: str, plan: { ...plan, required: true } } }, render: renderEvidence },
     isConcurrencySafe: () => false, timeoutMs: 5000,
     async execute(args, exec) { const s = await authoring.publishInitialPlan(args, exec.signal); return { ...s, plan: canonicalPlan(s.plan) }; },

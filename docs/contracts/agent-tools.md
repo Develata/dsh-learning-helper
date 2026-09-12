@@ -37,4 +37,4 @@ Authoring policy 扩展同一 grounding section：用户要求学习计划才 se
 
 P5 语义修正：课程资料不足以支持所请求证明时，说明缺失的定义/定理并停止课程证明。一般知识默认只补充简短背景/直觉；只有用户明确请求独立课外证明才展开，必须说明外部假设与定理，不能把未验证或省略关键构造的论证称为严格证明。此规则由既有 grounding section 拥有，不改变七工具或 durable state。
 
-模型输入校验错误提供首个失败字段路径（最长 200 字符）和原因，不返回堆栈或完整输入；例如 `days.0.tasks.0.questionCount`。learn/review 任务完全省略 questionCount，只有 practice 可携带 1–20。
+模型输入校验错误提供首个失败字段路径（最长 200 字符）和原因，不返回堆栈或完整输入；例如 `days.0.tasks.0.questionCount`。任务输入用两个 schema 分支表达：learn/review 不含 questionCount，practice 才可携带 1–20；持久化规则不变。发布后的聊天确认保持简短，学生在 Learning 面板查看结果，课程问答仍必须给出精确引用。

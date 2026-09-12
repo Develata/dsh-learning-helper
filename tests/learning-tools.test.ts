@@ -82,11 +82,13 @@ test('one trusted grounding section covers authoring authorization, evidence-fir
 
 test('invalid plan feedback identifies the field and omitting a non-practice count succeeds', async t => {
   const h = await fixture(t); await h.dispatch('course_outline_publish', h.drafts.outline);
-  const invalid = structuredClone(h.drafts.plan); invalid.days[0]!.tasks[0]!.questionCount = 0;
+  const invalid = structuredClone(h.drafts.plan); invalid.days[0]!.tasks[0]!.type = 'practice'; invalid.days[0]!.tasks[0]!.questionCount = 0;
   const rejected = await h.dispatch('study_plan_publish', invalid);
   assert.equal(rejected.isError, true);
   assert.match(JSON.stringify(rejected.content), /days\.0\.tasks\.0\.questionCount/);
   assert.equal(h.service.getState('authoring').plan, null);
+  invalid.days[0]!.tasks[0]!.type = 'learn';
+  assert.equal((await h.dispatch('study_plan_publish', invalid)).isError, true);
   delete invalid.days[0]!.tasks[0]!.questionCount;
   assert.equal((await h.dispatch('study_plan_publish', invalid)).isError, false);
 });
