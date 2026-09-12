@@ -11,6 +11,6 @@ try {
     const result = await h.service.submit('demo-calculus', demoSubmission());
     const state = h.service.getState('demo-calculus');
     console.log(JSON.stringify({ status: state.conceptStates[3]!.status, review: state.reviewQueue,
-      revision: result.receipt.revision, day2: state.plan.days[1] }, null, 2));
+      revision: result.receipt.revision, day2: state.plan!.days[1] }, null, 2));
   } finally { await h.close(); }
 } finally { await rm(dir, { recursive: true, force: true }); }

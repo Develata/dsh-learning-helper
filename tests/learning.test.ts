@@ -25,13 +25,13 @@ test('five answers produce exactly two uniform-continuity errors, weakness, revi
   assert.equal(state.conceptStates.find(s => s.conceptId === 'uniform-continuity')?.status, 'weak');
   assert.deepEqual(state.reviewQueue[0]?.evidenceAttemptIds, ['demo-first-submit:q4', 'demo-first-submit:q5']);
   assert.equal(result.receipt.revision?.oldVersion, 1); assert.equal(result.receipt.revision?.newVersion, 2);
-  const tasks = state.plan.days[1]!.tasks;
+  const tasks = state.plan!.days[1]!.tasks;
   assert.equal(tasks.find(t => t.type === 'review')?.estimatedMinutes, 20);
   assert.equal(tasks.find(t => t.type === 'practice')?.questionCount, 3);
   assert.equal(tasks.reduce((n, t) => n + t.estimatedMinutes, 0), 60);
   assert.match(state.revisions[0]!.reason, /Uniform Continuity/);
   assert.deepEqual(store.get('demo-calculus')!.plans[0], demoCourse().plans[0]);
-  assert.deepEqual(state.plan.days[0], demoCourse().plans[0]!.days[0]);
+  assert.deepEqual(state.plan!.days[0], demoCourse().plans[0]!.days[0]);
 });
 
 test('same submission including reordered answers returns exactly the same receipt without another durable write', options, async t => {
@@ -127,11 +127,11 @@ test('replanning preserves completed tasks; no capacity or no future day queues 
   const { service, store } = await fixture(t);
   await store.update('demo-calculus', s => { s.plans[0]!.days[1]!.tasks[0]!.status = 'done'; return s; });
   await service.submit('demo-calculus', demoSubmission());
-  assert.equal(service.getState('demo-calculus').plan.version, 1);
+  assert.equal(service.getState('demo-calculus').plan!.version, 1);
   assert.equal(service.getState('demo-calculus').reviewQueue.length, 1);
   const lastDay = await openLearning(':memory:', '2026-09-14T10:00:00.000Z'); t.after(() => lastDay.close());
   await lastDay.service.create(demoCourse()); await lastDay.service.submit('demo-calculus', demoSubmission());
-  assert.equal(lastDay.service.getState('demo-calculus').plan.version, 1);
+  assert.equal(lastDay.service.getState('demo-calculus').plan!.version, 1);
   assert.equal(lastDay.service.getState('demo-calculus').reviewQueue.length, 1);
 });
 
@@ -145,7 +145,7 @@ test('SQLite lock failure leaves the entire aggregate unchanged; retry commits a
   assert.deepEqual(h.store.get('demo-calculus'), before);
   db.exec('ROLLBACK');
   await h.service.submit('demo-calculus', demoSubmission());
-  assert.equal(h.service.getState('demo-calculus').plan.version, 2);
+  assert.equal(h.service.getState('demo-calculus').plan!.version, 2);
 });
 
 test('fresh process recovers attempts, review and both plan versions; replay after restart is idempotent', options, async t => {

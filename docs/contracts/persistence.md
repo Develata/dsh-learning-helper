@@ -1,6 +1,6 @@
 # Persistence contract v1
 
-唯一真值：LearningAggregate，存储 domain `learning_helper` version 1，table `courses`，key = course.id。仅 services 通过 provider 写入；不要原地修改 storage-domain 返回对象。
+学习真值：LearningAggregate，存储 domain `learning_helper` version 1，table `courses`，key = course.id。仅 services 通过 provider 写入；不要原地修改 storage-domain 返回对象。
 
 提交在一个 atomic update 内完成：验证 quiz/选项 → Attempt → ConceptState → ReviewQueue → StudyPlan 新版本 + PlanRevision → submission receipt。任何校验或持久化失败都不得暴露部分状态。所有 durable read 和 write 必须通过 schema；版本不兼容或损坏时拒绝打开，不重置数据。
 
@@ -15,3 +15,5 @@ Replan：只在新进入 weak 时尝试修订严格未来的下一天。加入 2
 资源上限：单课程 200 quizzes / 4000 attempts / 100 plan revisions；超限明确拒绝，绝不静默删学习证据。令 N 为聚合大小、C 为概念数、A 为 Attempt 数；当前校验/策略包含按概念扫描 Attempts，时间 O(N + C×A)、空间 O(N)，C ≤ 100。限额内优先一致性；未来扩大规模需新 ADR 与迁移。
 
 失败由 Host 返回稳定 code；客户端超时不证明未提交，应使用原 submissionId 重试。SQLite 锁冲突直接失败，无后台无限重试。
+
+Course setup 允许 concepts/conceptStates/plans 为空；这是兼容旧完整聚合的 v1 schema relaxation。createCourse 只接收 id/title/subject/examAt?/dailyMinutes，由 service 初始化空集合与 Host 时间。getState.plan 可以为 null；没有已发布 quiz 返回 not-found，没有 initial plan 拒绝提交（conflict）。Source/corpus 不进入该聚合，独立存储见 [Evidence](evidence.md)。

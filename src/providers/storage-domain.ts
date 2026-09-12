@@ -1,7 +1,7 @@
 import { defineDomain, domainTable } from '@deepseek-ai/dsh-storage-domain';
 import type { Domain, DomainFacility } from '@deepseek-ai/dsh-storage-domain';
 import { learningStateSchema } from '../services/state-schema.js';
-import type { LearningAggregate } from '../domain/model.js';
+import type { LearningAggregate, Course } from '../domain/model.js';
 import { LearningError } from '../domain/errors.js';
 import type { LearningStore } from '../services/learning.js';
 
@@ -34,6 +34,15 @@ export class HarnessLearningStore implements LearningStore {
     if (this.closing) throw new LearningError('closed', 'Learning store is closing');
     const state = this.domain.table('courses').get(id);
     return state === undefined ? undefined : structuredClone(state);
+  }
+  getCourse(id: string): Course | undefined {
+    if (this.closing) throw new LearningError('closed', 'Learning store is closing');
+    const course = this.domain.table('courses').get(id)?.course;
+    return course === undefined ? undefined : structuredClone(course);
+  }
+  listCourses(): Course[] {
+    if (this.closing) throw new LearningError('closed', 'Learning store is closing');
+    return [...this.domain.table('courses').entries()].map(([, s]) => structuredClone(s.course)).sort((a, b) => a.id.localeCompare(b.id));
   }
   create(state: LearningAggregate): Promise<void> {
     const owned = learningStateSchema.parse(state);

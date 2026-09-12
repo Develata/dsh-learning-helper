@@ -11,6 +11,7 @@ export const courseSchema = z.strictObject({
   examAt: timestamp.optional(), dailyMinutes: z.number().int().min(30).max(240),
   status: z.enum(['active', 'archived']),
 });
+export const createCourseSchema = courseSchema.omit({ createdAt: true, status: true });
 export const conceptSchema = z.strictObject({
   id: idSchema, courseId: idSchema, name: text, aliases: z.array(text).max(20),
   prerequisiteIds: z.array(idSchema).max(20), sourceRefs,
@@ -65,9 +66,9 @@ export const receiptSchema = z.strictObject({
 
 export const aggregateSchema = z.strictObject({
   schemaVersion: z.literal(1), course: courseSchema,
-  concepts: z.array(conceptSchema).min(1).max(100), quizzes: z.array(quizSchema).max(200),
+  concepts: z.array(conceptSchema).max(100), quizzes: z.array(quizSchema).max(200),
   attempts: z.array(attemptSchema).max(4000), conceptStates: z.array(conceptStateSchema).max(100),
-  reviewQueue: z.array(reviewSchema).max(100), plans: z.array(studyPlanSchema).min(1).max(101),
+  reviewQueue: z.array(reviewSchema).max(100), plans: z.array(studyPlanSchema).max(101),
   revisions: z.array(revisionSchema).max(100), submissions: z.array(receiptSchema).max(200),
 }).superRefine((a, ctx) => {
   const fail = (message: string) => ctx.addIssue({ code: 'custom', message });
@@ -120,7 +121,7 @@ export const aggregateSchema = z.strictObject({
       for (const t of d.tasks) refs(t.conceptIds);
     });
   });
-  if (a.revisions.length !== a.plans.length - 1) fail('missing plan revision');
+  if (a.revisions.length !== Math.max(0, a.plans.length - 1)) fail('missing plan revision');
   a.revisions.forEach((r, i) => {
     unique(r.evidenceAttemptIds, 'revision evidence');
     if (r.oldVersion !== i + 1 || r.newVersion !== i + 2 || r.evidenceAttemptIds.some(id => !attempts.has(id) || attempts.get(id)!.correct)) fail('invalid revision evidence/version');

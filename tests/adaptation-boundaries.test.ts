@@ -18,8 +18,8 @@ test('valid long concept names cannot prevent grading or overflow generated reas
   assert.equal(result.attempts.length, 2);
   const updated = h.service.getState(state.course.id);
   assert.equal(updated.reviewQueue.length, 4);
-  assert.equal(updated.plan.version, 2);
-  assert.equal(updated.plan.days[1]!.tasks.filter(t => t.type === 'review').length, 4);
+  assert.equal(updated.plan!.version, 2);
+  assert.equal(updated.plan!.days[1]!.tasks.filter(t => t.type === 'review').length, 4);
   assert.ok(updated.revisions[0]!.reason.length <= 4000);
   assert.equal(updated.concepts[0]!.name, state.concepts[0]!.name);
 });
@@ -32,6 +32,7 @@ test('generated task identities cannot collide with existing plan tasks', async 
   await h.service.create(state);
   await h.service.submit(state.course.id, demoSubmission());
   const plan = h.service.getState(state.course.id).plan;
+  assert.ok(plan);
   const ids = plan.days.flatMap(d => d.tasks.map(t => t.id));
   assert.equal(new Set(ids).size, ids.length);
   assert.deepEqual(plan.days[0], state.plans[0]!.days[0]);
@@ -49,9 +50,9 @@ test('replanning respects task slots as well as time and preserves completed wor
   const result = await h.service.submit(state.course.id, demoSubmission());
   assert.equal(result.attempts.length, 5);
   const updated = h.service.getState(state.course.id);
-  assert.equal(updated.plan.version, 1);
+  assert.equal(updated.plan!.version, 1);
   assert.equal(updated.reviewQueue.length, 1);
-  assert.deepEqual(updated.plan.days[1], day);
+  assert.deepEqual(updated.plan!.days[1], day);
 });
 
 test('remaining pending work cannot overflow the revised day task limit', async t => {
@@ -62,7 +63,7 @@ test('remaining pending work cannot overflow the revised day task limit', async 
   await h.service.create(state);
   await h.service.submit(state.course.id, demoSubmission());
   const updated = h.service.getState(state.course.id);
-  assert.equal(updated.plan.version, 2);
-  assert.equal(updated.plan.days[1]!.tasks.length, 50);
-  assert.equal(updated.plan.days[1]!.tasks.filter(t => t.type === 'review').length, 1);
+  assert.equal(updated.plan!.version, 2);
+  assert.equal(updated.plan!.days[1]!.tasks.length, 50);
+  assert.equal(updated.plan!.days[1]!.tasks.filter(t => t.type === 'review').length, 1);
 });

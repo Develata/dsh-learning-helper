@@ -35,7 +35,8 @@ export function adaptPlan(state: LearningAggregate, previouslyWeak: Set<string>,
       evidenceAttemptIds: evidence.map(t => t.id), dueAt: now };
   });
   const newlyWeak = state.reviewQueue.filter(r => !previouslyWeak.has(r.conceptId));
-  const old = state.plans.at(-1)!;
+  const old = state.plans.at(-1);
+  if (!old) return;
   const today = Math.floor((Date.parse(now.slice(0, 10)) - Date.parse(old.startsOn)) / 86_400_000) + 1;
   // Pre-plan submissions cannot pull remediation into Day 1; no next day means queue only.
   const nextDay = old.days.find(d => d.day > Math.max(1, today));

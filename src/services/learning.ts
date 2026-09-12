@@ -1,12 +1,14 @@
 import { z } from 'zod';
-import { submissionSchema, idSchema } from '../domain/model.js';
+import { submissionSchema, idSchema, createCourseSchema } from '../domain/model.js';
 import { learningStateSchema } from './state-schema.js';
-import type { LearningAggregate, Submission, Receipt } from '../domain/model.js';
+import type { LearningAggregate, Submission, Receipt, Course } from '../domain/model.js';
 import { LearningError } from '../domain/errors.js';
 import { adaptPlan, updateConcept } from '../policy/adaptation.js';
 
 /** Atomic aggregate persistence; providers serialize transforms and commit before resolving. */
 export interface LearningStore {
+  listCourses(): Course[];
+  getCourse(courseId: string): Course | undefined;
   get(courseId: string): LearningAggregate | undefined;
   create(state: LearningAggregate): Promise<void>;
   update(courseId: string, transform: (current: LearningAggregate) => LearningAggregate): Promise<LearningAggregate>;
@@ -22,6 +24,19 @@ const normalized = (s: Submission) => JSON.stringify({ quizId: s.quizId, answers
 export class LearningService {
   constructor(private readonly store: LearningStore, private readonly clock: () => Date = () => new Date()) {}
   async create(input: unknown): Promise<void> { await this.store.create(parse(learningStateSchema, input)); }
+  async createCourse(input: unknown): Promise<Course> {
+    const course: Course = { ...parse(createCourseSchema, input), createdAt: this.clock().toISOString(), status: 'active' };
+    await this.create({ schemaVersion: 1, course, concepts: [], quizzes: [], attempts: [], conceptStates: [],
+      reviewQueue: [], plans: [], revisions: [], submissions: [] });
+    return structuredClone(course);
+  }
+  listCourses(): Course[] { return this.store.listCourses(); }
+  getCourse(id: string): Course {
+    parse(idSchema, id);
+    const course = this.store.getCourse(id);
+    if (!course) throw new LearningError('not-found', 'Course not found');
+    return course;
+  }
   private requireCourse(id: string): LearningAggregate {
     parse(idSchema, id);
     const state = this.store.get(id);
@@ -31,7 +46,7 @@ export class LearningService {
   getState(courseId: string) {
     const s = this.requireCourse(courseId);
     return structuredClone({ course: s.course, concepts: s.concepts, conceptStates: s.conceptStates,
-      reviewQueue: s.reviewQueue, plan: s.plans.at(-1)!, revisions: s.revisions });
+      reviewQueue: s.reviewQueue, plan: s.plans.at(-1) ?? null, revisions: s.revisions });
   }
   getQuiz(courseId: string, quizId: string) {
     const s = this.requireCourse(courseId);
@@ -53,6 +68,8 @@ export class LearningService {
       if (current.submissions.some(s => s.submission.quizId === submission.quizId)) throw new LearningError('conflict', 'Quiz already submitted; publish a new quiz for further practice');
       const quiz = current.quizzes.find(q => q.id === submission.quizId);
       if (!quiz) throw new LearningError('not-found', 'Quiz not found');
+      const initialPlan = current.plans.at(-1);
+      if (!initialPlan) throw new LearningError('conflict', 'Publish an initial study plan before practice');
       if (Date.parse(now) < Date.parse(quiz.createdAt) || Date.parse(now) < Date.parse(current.attempts.at(-1)?.submittedAt ?? current.course.createdAt)) throw new LearningError('conflict', 'Host clock moved backwards');
       if (submission.answers.length !== quiz.items.length) throw new LearningError('invalid-input', 'Answer every quiz item exactly once');
       const answers = new Map(submission.answers.map(a => [a.itemId, a.selectedOption]));
@@ -77,7 +94,7 @@ export class LearningService {
         }
       }
       adaptPlan(next, weak, now);
-      const receipt: Receipt = { submission: structuredClone(submission), attemptIds, submittedAt: now, planVersion: next.plans.at(-1)!.version };
+      const receipt: Receipt = { submission: structuredClone(submission), attemptIds, submittedAt: now, planVersion: next.plans.at(-1)?.version ?? initialPlan.version };
       if (next.revisions.length > current.revisions.length) receipt.revision = next.revisions.at(-1)!;
       next.submissions.push(receipt);
       return learningStateSchema.parse(next);
