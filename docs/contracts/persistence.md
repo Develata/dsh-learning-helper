@@ -17,3 +17,5 @@ Replan：只在新进入 weak 时尝试修订严格未来的下一天。加入 2
 失败由 Host 返回稳定 code；客户端超时不证明未提交，应使用原 submissionId 重试。SQLite 锁冲突直接失败，无后台无限重试。
 
 Course setup 允许 concepts/conceptStates/plans 为空；这是兼容旧完整聚合的 v1 schema relaxation。createCourse 只接收 id/title/subject/examAt?/dailyMinutes，由 service 初始化空集合与 Host 时间。getState.plan 可以为 null；没有已发布 quiz 返回 not-found，没有 initial plan 拒绝提交（conflict）。Source/corpus 不进入该聚合，独立存储见 [Evidence](evidence.md)。
+
+P3 发布沿用同一 learning domain version 1，不新增持久化字段/表。Draft 是独立输入 schema，转换规则见 [Agent tools](agent-tools.md)。Outline、初始 plan、quiz 分别在一次 aggregate update 内落盘；ConceptState 由 initialConceptState 生成，Agent 无权填写。发布引用只来自已验证 Evidence，存储的是 canonical refs；全文留在 evidence.db。Outline 与 v1 plan 的规范化内容直接用于重试比较，quiz 使用内容派生身份，无 command ledger。只有原 P1 policy 可以追加 adaptive PlanRevision。
