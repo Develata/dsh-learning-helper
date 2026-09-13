@@ -1,6 +1,8 @@
 # v0.1 最终验收
 
-Authority：P5 交付证明。产品范围由 [product](../product.md) 拥有；不重新设计 P1–P4。
+Authority：**v0.1.0 / P5 历史交付证明**，固定插件 `958cf67627736232d06a9eeee70cdcb2c0369248`、运行壳 `8a47b6d55f6c603d4c8b90159b30f361e228611b`。下文五场景、100 tests、两张截图及 TXT/Markdown 风险适用性均指该版本，不是当前 Workspace/PDF 开发版。
+
+历史产品范围见 [v0.1.0 product 快照](https://github.com/Develata/dsh-learning-helper/blob/v0.1.0/docs/product.md)；当前版本改读 [v0.2 matrix](matrix.md)、[golden path](golden-path.md) 与 [CURRENT](../CURRENT.md)。本地 `artifacts/*` 是可重跑覆盖的非版本化输出，不能仅凭同名文件认定它仍是 v0.1 回执。
 
 | Gate | 必需证据 | 状态 |
 |---|---|---|
@@ -11,7 +13,7 @@ Authority：P5 交付证明。产品范围由 [product](../product.md) 拥有；
 
 模型语义检查分两层：程序验证真实工具轨迹及 citationLabel/canonicalRef 精确匹配；逐项检查连续性、紧致定义域假设、一致连续结论、证明逻辑、intuition 与 proof 区分。禁止只用关键词或另一个模型宣称数学正确。回执只保留投影后的 provider/model、场景、工具名、引用、答案/题目与检查结果供语义审查；不存 API key/cookie/launch token。
 
-缺少凭证时其他 gate 继续，最终必须明确 `REAL LLM GATE: BLOCKED — credentials unavailable`。全部非凭证 gate 通过仍不能宣称 fully accepted；真实模型也通过才考虑 v0.1.0 tag。P5 后停止功能开发。
+当时的发布门槛要求真实模型通过后才打 v0.1.0 tag，缺凭证不能宣称 fully accepted。该 tag 已发布并保持冻结；后续经用户授权的 v0.2 不重写此 release。
 
 ## 真实模型结论（2026-09-12）
 

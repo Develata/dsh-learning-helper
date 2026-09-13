@@ -1,16 +1,40 @@
 # 当前状态
 
-- Current phase：v0.2 全局 review/fix 已完成；本轮录制脚本与新版README演示素材分两批本地提交，未改产品运行代码。仍在 feat/workspace-v02，未 push、未打 tag、未合入默认分支、未更新日常实例。
-- Last verified runtime：635009c2679ff8e7cb46faf63710aaa4942d55f9。当前远端/运行壳 pin 仍为 a0fa0c6a851cb106ac00b02b3381b5c126110837；本轮及前次数学显示改动均未发布。v0.1.0仍指向958cf67627736232d06a9eeee70cdcb2c0369248；Harness upstream c291e7961a515f6d7af9304e7fd1d257929aef26。
-- Works：官方Session→Workspace→单Project；7 tools无courseId/global picker；Workspace-local state/evidence、稳定manifest与relative assets；200 sources；PDF.js/原件/page citation；gated vision/cache、MinerU protocol2、atomic generation/historical read；显式offline v1迁移保留原库；原学习闭环、任务会话和共享MarkdownText/KaTeX数学显示。
-- Review scope：Workspace/路径隔离、数据库所有权与回放、迁移/失败恢复、PDF/视觉/MinerU、authoring/tools、Host认证/公开投影、客户端提交/切换/回放、配额、包与文档。未改Harness runtime、学习算法或durable schema，未增加依赖。
-- Findings fixed：① 缓存PDF代重新选择未切换active/FTS；已修复，重新解析失败保留此前active，扫描件无本地文本不能冒充local-fast成功，旧citation仍可读。② Workspace默认PDF模式被Host/UI忽略，local-fast可能意外走视觉；已修复默认继承/显式覆盖/配置加载门槛。③ binary upload误用12秒deadline；恢复独立45秒并保留caller cancellation。④ 精简study_plan_publish回执被旧卡片读成0天；兼容新回执和历史完整plan，异常数据安全回退。四项均先复现再修复。
-- Verification：本轮 typecheck、151/151（129 backend/script +22 client）通过；录制使用 packed integration 自动 build/pack/安装到独立临时 Harness profile。此前完整 review 已通过5个demo、standalone、默认PDF模式/覆盖/设置刷新、计划卡片、失败/丢包重试、Weak/v2、数学/键盘/错误状态及1440/1024/390 light/dark布局；这些未改动的产品检查本轮不全部重跑。
-- Demo media：见[录制与素材说明](DEMO.md#仓库演示素材)。当前 v0.2 真实 Chromium 录屏展示 Workspace、MD/PDF、公式练习、3/5评分、Weak/v2和刷新；四张PNG与1分55秒中文字幕MP4替换旧v0.1素材。录制及进程重启断言通过，pageErrors=[]；四张截图和关键视频帧已人工检查，H.264全片解码通过。作者draft使用确定性fixture，录制不调用外部LLM；不作为真实multimodal/MinerU证明。
-- Proof：本轮录制回执 artifacts/demo-v02/recording.json 与 packed 回执 artifacts/integration-result.json；运行代码基于 5d1f7a496b9f7ba3368c11b6c1ec7b67403dc2e2，新改动只有录制脚本、素材和文档。此前全面review浏览器回执仍在 /tmp/lh-review-browser/result.json。Browser plugin不可用，沿用Harness Playwright 1.61.1，不读取用户模型凭证或修改用户数据。
-- Capacity：独立200-source、50,792,490 bytes正文fixture：导入3.38秒，英文FTS20条31.6ms、三字无命中0.4ms、两字无命中扫描98.8ms；单机单次测量，不作生产延迟保证。复现见local-dev。
-- Dependency/security：上轮review的plugin production audit 0，无DB/cache/artifacts入Git。既有Docker runtime closure 24 advisories（11 high/12 moderate/1 low）沿用已记录的固定upstream风险，见COMPATIBILITY；本轮素材更新未增加依赖，未重新审计或构建镜像。
-- External verification：此前newapi/gpt-5.6-luna已通过六场景工具/引用及authoring数学复核，本轮未重跑真实LLM。上次外部验收时公开inputModalities未声明image、未配置官方MinerU服务；本轮未重跑这些外部gate，真实multimodal/MinerU仍未验证，fake覆盖不冒充真实服务。
-- Docker：历史aad1263221da277f70ca1d724aff4e83fad29be2已通过无缓存build/冷启动/浏览器/认证/重启；本轮未部署，旧runtime-equivalence回执不证明当前改动已进入容器。
-- Active limits：本地Workspace只允许一个Host；不支持NFS/SMB/多Host并发；历史generation最多10次含失败预留，不自动删除已存证据；v1不自动迁移；raw session/debug可能含authoring args，普通UI提交前不泄key。
-- Next 3 tasks：① 用户体验本地修复，另行决定push与部署；② 配置image模型后验证真实multimodal；③ 有官方MinerU服务时执行真实protocol2 smoke。保持v0.2未发布状态。
+v0.2 开发分支 `feat/workspace-v02`。全局 review 修复、数学显示和新版录屏已本地分批提交；本轮只整理文档，未改产品代码、安装依赖或部署实例。
+
+本轮文档检查：37份Markdown、125个本地链接/锚点、package脚本名、七工具注册、关键schema/投影与跨仓pin核对通过；历史LLM/Docker回执按各自范围引用。软件测试、真实模型和Docker不因纯文档整理重复运行。
+
+## 版本与发布边界
+
+| 对象 | 最近核实的事实（2026-09-13） |
+|---|---|
+| 本轮文档整理前 HEAD | `0e43219`；录制脚本 `184f235`，素材 `0e43219` |
+| 最近验证的产品运行代码 | `635009c2679ff8e7cb46faf63710aaa4942d55f9`；后续为测试、录制和文档 |
+| origin/feat/workspace-v02 与运行壳 plugin pin | `a0fa0c6a851cb106ac00b02b3381b5c126110837`；本地数学显示/review修复/新素材尚未push |
+| 运行壳 HEAD / origin 同名分支 | `a03f00197de8df8a4590f4fed5414f322bbfd4ec`；本轮不改pin或发行文件 |
+| 已冻结 v0.1.0 / origin/main | `958cf67627736232d06a9eeee70cdcb2c0369248`；未创建v0.2 tag |
+
+Harness 固定版本与依赖风险由 [COMPATIBILITY](../COMPATIBILITY.md) 拥有；`packages/`、`apps/` 相对固定upstream仍为0 diff。远端、运行壳pin、实测镜像与本地HEAD是不同对象。
+
+## 可用能力与证据
+
+Workspace隔离、双库/相对资产、TXT/MD/PDF本地解析、代际切换与历史引用、显式v1迁移、七工具作者闭环、Weak→重排、学生UI/任务会话/数学显示已实现。支持范围见 [product](product.md)，逐项证明见 [matrix](acceptance/matrix.md)。最近review修复了缓存代未激活、PDF默认模式未继承、binary上传超时过短及精简plan回执卡片误显示0天。
+
+| 验证面 | 最近证据 / 限制 |
+|---|---|
+| 本地回归 | 2026-09-13 typecheck、151/151（129 backend/script +22 client）通过；完整review还通过5个demo与无sibling install/build/test/pack。本轮纯文档未重跑这些检查 |
+| packed / 浏览器 | `artifacts/integration-result.json` 为录屏那次5d1f7a4+dirty工作树的build/pack/安装/认证/A-B/重启证明；该run选的是recording分支，不是默认完整browser smoke |
+| 全面学生UI检查 | 上轮 `/tmp/lh-review-browser/result.json` 与对应截图覆盖丢包重试、刷新、Workspace、PDF默认/覆盖、卡片、数学/键盘/错误状态及1440/1024/390 light/dark；临时文件不保证长期保留 |
+| 仓库演示 | [DEMO](DEMO.md#仓库演示素材)：四张PNG、115秒中文字幕MP4；实际packed Web与fixture作者draft，pageErrors=[]、重启/全片解码/画面检查通过。局部回执在artifacts/demo-v02/recording.json |
+| 真实LLM | 2026-09-13 newapi/gpt-5.6-luna的六场景与修复后authoring复验分别有范围；具体JSON/语义状态见 [golden path](acceptance/golden-path.md#真实模型语义验收)。本轮未调用模型 |
+| Docker | artifacts/docker-result.json验证的是`aad1263221da277f70ca1d724aff4e83fad29be2`；与远端a0fa0c6的184个运行文件等价回执在v02-runtime-equivalence.json。不能据此宣称本地635009c已进入镜像 |
+
+上述artifacts回执是本地可覆盖输出，必须核对其中SHA、dirty与模式，不能仅凭同名文件继承旧PASS。容量测量与复现命令只在 [local-dev](operations/local-dev.md) 维护。
+
+## 未验证项与限制
+
+最近外部验收时模型未声明image能力、未配置官方MinerU；真实multimodal/MinerU仍未验证，本轮不重新探测凭据或运行环境。fake provider、普通PDF.js和演示录屏不替代外部服务质量证明。
+
+每个本地Workspace只允许一个Host写入，不支持NFS/SMB/同步盘并发SQLite；不删除历史generation或引用；v1必须offline显式迁移；原始session/debug/export不是考试防作弊边界。精确限额与失败模型见 [Evidence](contracts/evidence.md)、[Persistence](contracts/persistence.md)、[Web UI](contracts/web-ui.md)。
+
+下一步：① 用户体验当前本地修复并审阅新版演示；② 有image模型/官方MinerU服务时执行相应独立验收；③ 获得明确发布授权后按plugin→远端确认→fork pin顺序交付，并为包含本地修复的镜像重新验收。不自动push、部署或打tag。

@@ -50,7 +50,7 @@ flowchart LR
 
 ## 快速开始
 
-v0.2 目前保留在 `feat/workspace-v02` 分支，尚未发布 tag；默认分支与 `v0.1.0` 仍用于已发布版本。运行壳与部署文件在 [Develata/learning-helper](https://github.com/Develata/learning-helper)：
+v0.2 目前保留在 `feat/workspace-v02` 分支，尚未发布 tag；默认分支与 `v0.1.0` 仍用于已发布版本。以下 Docker 流程构建运行壳锁定的已推送插件，本地公式显示、review 修复和演示素材可能更新，差异见 [CURRENT](docs/CURRENT.md)。运行壳与部署文件在 [Develata/learning-helper](https://github.com/Develata/learning-helper)：
 
 ```bash
 git clone --branch feat/workspace-v02 https://github.com/Develata/learning-helper.git
@@ -59,7 +59,7 @@ docker compose up --build -d
 docker compose exec learning-helper node /opt/learning-helper/open.mjs
 ```
 
-打开最后一条命令返回的本机登录地址，在 Harness 模型设置中配置 provider，选择/创建本地 Workspace，随后打开“学习”面板。凭证只在运行时配置，不进入 Git、Dockerfile 或聊天。版本锁、持久化与故障处置见 [部署说明](https://github.com/Develata/learning-helper/blob/feat/workspace-v02/deploy/learning-helper/README.md)。源码方式见 [本地运行](docs/operations/local-dev.md) / [Harness 集成](docs/operations/harness-integration.md)。
+打开最后一条命令返回的本机登录地址，在 Harness 模型设置中配置 provider，选择/创建本地 Workspace，随后打开“学习”面板。凭证只在运行时配置，不进入 Git、Dockerfile 或聊天。版本锁、持久化与故障处置见 [部署说明](https://github.com/Develata/learning-helper/blob/feat/workspace-v02/deploy/learning-helper/README.zh.md)。体验当前 checkout 使用 [本地运行](docs/operations/local-dev.md) / [Harness local link](docs/operations/harness-integration.md)。
 
 ## 原创贡献与复用
 

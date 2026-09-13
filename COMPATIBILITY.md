@@ -10,4 +10,6 @@ MinerU adapter 对接官方自托管 protocol 2，参考 upstream 4fe4bde114a23e
 
 默认 runtime diff gate 要求 fork packages/apps 相对上述 SHA 为0。已有独立 branding分支 allowlist留作旧功能兼容，v0.2开发不合入。Docker lock中的harnessForkSha是实际build-input提交，非包含lock文件的自引用提交；最终运行壳metadata pin最终remote pluginSHA。v0.1 tag不修改。
 
-依赖复核（2026-09-13）：插件 `pnpm audit --prod` 为0；从本轮实际Docker runtime提取manifest/lock审计仍为24条（11 high、12 moderate、1 low、0 critical），分类为固定upstream传递风险，不擅自升级。v0.2新增PDF与图片处理，不能沿用v0.1“TXT路径不调用图片解析”的适用性结论；PDF.js Worker、页/字节/输出配额限制资源消耗，但不等于修复整个Harness的漏洞或形成完整沙箱。仍限本机单用户、loopback认证部署；未做全runtime exploit验证。原始结果在本机artifacts/v02-runtime-audit.json。
+依赖复核记录（2026-09-13）：插件 `pnpm audit --prod` 为0；从实测插件 `aad1263221da277f70ca1d724aff4e83fad29be2` 的 Docker runtime 提取manifest/lock，审计为24条（11 high、12 moderate、1 low、0 critical），分类为固定upstream传递风险，不擅自升级。这是对应lock/runtime的历史检查，不是每轮文档编辑重新audit的结论。
+
+v0.2新增PDF与图片处理，不能沿用v0.1“TXT路径不调用图片解析”的适用性结论；PDF.js Worker、页/字节/输出配额限制资源消耗，但不等于修复整个Harness的漏洞或形成完整沙箱。仍限本机单用户、loopback认证部署；未做全runtime exploit验证。原始结果在本机artifacts/v02-runtime-audit.json；当前源码、已推送版本与实测镜像的关系见 [CURRENT](docs/CURRENT.md)。
