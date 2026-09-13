@@ -60,6 +60,15 @@ export class LearningService {
     return structuredClone({ course: s.course, concepts: s.concepts, conceptStates: s.conceptStates,
       reviewQueue: s.reviewQueue, plan: s.plans.at(-1) ?? null, revisions: s.revisions });
   }
+  /** One committed snapshot for Agent decisions; no quiz keys or full revision history. */
+  getAuthoringState(courseId: string) {
+    const s = this.requireCourse(courseId);
+    const quizzes = quizSummaries(s);
+    return structuredClone({ course: s.course, concepts: s.concepts, conceptStates: s.conceptStates,
+      reviewQueue: s.reviewQueue, currentPlan: s.plans.at(-1) ?? null, recentPlanRevision: s.revisions.at(-1) ?? null,
+      quizCount: quizzes.length, unsubmittedQuizCount: quizzes.filter(q => !q.submitted).length,
+      recentQuizzes: quizzes.slice(0, 10) });
+  }
   getQuiz(courseId: string, quizId: string) {
     const s = this.requireCourse(courseId);
     const q = s.quizzes.find(q => q.id === quizId);

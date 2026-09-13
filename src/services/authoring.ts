@@ -4,14 +4,20 @@ import { LearningError } from '../domain/errors.js';
 import type { LearningService } from './learning.js';
 import { EvidenceService, validate } from './evidence.js';
 
+type LearningStage = 'archived' | 'needs_material' | 'needs_outline' | 'needs_plan' | 'ready';
+
 /** Orchestrates read-only evidence validation and narrow LearningService commits; never owns a DB. */
 export class CourseAuthoringService {
   constructor(private readonly learning: LearningService, private readonly evidence: EvidenceService) {}
   learningContext(input: unknown, signal = new AbortController().signal) {
     signal.throwIfAborted();
     const { courseId } = validate(learningContextArgsSchema, input);
-    const { revisions, plan, ...state } = this.learning.getState(courseId);
-    return { ...state, currentPlan: plan, recentPlanRevision: revisions.at(-1) ?? null };
+    const state = this.learning.getAuthoringState(courseId);
+    // Read only bounded source metadata; course corpus never enters the learning aggregate.
+    const sources = this.evidence.listSources(courseId, signal).map(({ id, filename, status, chunkCount }) => ({ id, filename, status, chunkCount }));
+    const stage: LearningStage = state.course.status === 'archived' ? 'archived' : !sources.some(s => s.status === 'ready') ? 'needs_material'
+      : !state.concepts.length ? 'needs_outline' : state.currentPlan === null ? 'needs_plan' : 'ready';
+    return { ...state, stage, sources };
   }
   private async resolve(courseId: string, ids: string[], signal: AbortSignal): Promise<Map<string, string>> {
     signal.throwIfAborted();

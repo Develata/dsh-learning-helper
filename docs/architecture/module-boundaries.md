@@ -16,4 +16,6 @@ providers 不反向调用 UI/tools，不 import Harness 私有实现。CourseAut
 
 Student dashboard / quiz summary / result 是 services 的只读投影；LearningService 从单个 committed aggregate 调用纯 projection helpers。Client 不 import Host runtime、provider 或 AuthoringService，也不新增 durable fields。
 
+Agent 学习上下文也由 LearningService.getAuthoringState 从一次 snapshot 派生，复用 quizSummaries；AuthoringService 只合并 Evidence source 元数据并判断 setup 阶段。Model render 的字段取舍由 tools/learning-render 拥有；canonical schema 不依赖 render，状态统计/引用校验不下放给工具 adapter。此路径不读取教材正文，公开投影只保留最近修订；底层 store.get 原有的 aggregate 防御性复制保持不变。
+
 TaskSessions 由 client apply 生命周期拥有，跨面板卸载保留在途状态；task-session-port 只适配公开 Harness 会话创建、模型选择、prompt admission 与导航，React 只消费注入的 observable/操作。任务↔会话书签是浏览器状态，真实 transcript/模型选择由 Harness 持久化，学习状态仍只由 LearningService 写入；书签存储选择见 [ADR-0004](../adr/0004-task-session-bookmarks.md)。

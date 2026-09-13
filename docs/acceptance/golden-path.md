@@ -33,3 +33,9 @@ P4 Golden Browser Path（确定性 authoring + 实际浏览器已验证）：
 8. 计划任务点击“新会话”→ 独立 Harness 会话自动收到当前任务请求，继承当前模型；原聊天草稿保留。重开学习面板/刷新后继续该会话不重发；同任务再建会话，模拟发送成功但响应丢失，刷新后使用相同 requestId 重试且只有一条实际 user message。展开任务的多个会话入口。模型回复使用 keyless fixture，只证明正式 Agent admission/导航路径，不冒充真实模型教学语义。
 
 证据：tests/student.test.ts、tests/client、scripts/browser-smoke.mjs，由 test:integration 默认执行。artifacts/browser 保存最近运行状态与本地截图，不入 Git。中等宽度下 Harness 默认三栏会压缩聊天，可用其原生全屏或收起左栏；插件提示全屏，不接管全局布局。Quiz 当前以普通文本显示，长篇数学讲解仍交给 Harness chat renderer；citation deep-link 非本阶段验收项。
+
+## 本地 Agent 流程复核
+
+既有发布验收之外，本地开发版通过 `learning_state_get` 查看 needs_material → needs_outline → needs_plan → ready；processing/failed 不伪装 ready。可见最新练习与提交状态，请求继续时使用面板中的已有练习，新题仍由用户授权发布。状态摘要与展示卡片使用同一结果，提交后仍显示 Weak、v2 和定向复习；完整测试见 [matrix](matrix.md)。
+
+真实模型检查仍运行 `pnpm acceptance:llm` 的五场景，不能把工具层 deterministicPass 当成数学/教学策略 PASS。尤其人工检查资料不足后的停止行为、精确 read 引用、题目 key 与解释。当前本地验证与修正记录由 [CURRENT](../CURRENT.md) 拥有，冻结版本证据保留在原 final-delivery 文档。

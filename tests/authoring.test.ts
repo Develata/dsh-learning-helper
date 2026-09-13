@@ -6,12 +6,81 @@ import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { LearningError } from '../src/domain/errors.js';
 import { openAuthoring, authoringDrafts } from './authoring-helpers.js';
+import { CourseAuthoringService } from '../src/services/authoring.js';
+import { EvidenceService } from '../src/services/evidence.js';
+import { SqliteEvidenceStore } from '../src/providers/evidence-sqlite.js';
+import { TextParser } from '../src/providers/text-parser.js';
 
 async function fixture(t: test.TestContext) {
   const h = await openAuthoring(); t.after(() => h.close());
   return { ...h, drafts: await authoringDrafts(h) };
 }
 const code = (expected: string) => (e: unknown) => e instanceof LearningError && e.code === expected;
+
+test('learning context reports actual setup progress, bounded quiz history and submission state without mutating either plane', async t => {
+  const h = await openAuthoring(); t.after(() => h.close());
+  await h.service.createCourse({ id: 'empty', title: 'Empty', subject: 'calculus', dailyMinutes: 60 });
+  const empty = h.authoring.learningContext({ courseId: 'empty' });
+  assert.equal(empty.stage, 'needs_material'); assert.deepEqual(empty.sources, []);
+  assert.equal(empty.quizCount, 0); assert.deepEqual(empty.recentQuizzes, []);
+  const drafts = await authoringDrafts(h);
+  const state = () => h.authoring.learningContext({ courseId: 'authoring' });
+  assert.equal(state().stage, 'needs_outline');
+  assert.equal(state().sources[0]!.status, 'ready');
+  await h.authoring.publishOutline(drafts.outline); assert.equal(state().stage, 'needs_plan');
+  await h.authoring.publishInitialPlan(drafts.plan); assert.equal(state().stage, 'ready');
+  for (let n = 0; n < 12; n++) await h.authoring.publishQuiz({ ...drafts.quiz, purpose: `Practice ${n}` });
+  const beforeSubmit = state();
+  assert.equal(beforeSubmit.quizCount, 12); assert.equal(beforeSubmit.unsubmittedQuizCount, 12);
+  assert.equal(beforeSubmit.recentQuizzes.length, 10);
+  assert.equal(beforeSubmit.recentQuizzes[0]!.purpose, 'Practice 11');
+  assert.equal(beforeSubmit.recentQuizzes[9]!.purpose, 'Practice 2');
+  assert.equal(beforeSubmit.recentQuizzes[0]!.correctCount, null);
+  const quiz = h.service.getQuiz('authoring', beforeSubmit.recentQuizzes[0]!.id);
+  await h.service.submit('authoring', { submissionId: 'context-submit', quizId: quiz.id,
+    answers: quiz.items.map((i, n) => ({ itemId: i.id, selectedOption: n < 3 ? 0 : 1 })) });
+  const saved = h.store.get('authoring');
+  const sources = h.evidence.listSources('authoring');
+  // This projection needs metadata, never evidence text or quiz answer keys.
+  t.mock.method(h.evidence, 'read', () => { throw new Error('Unexpected corpus read'); });
+  const get = t.mock.method(h.store, 'get');
+  const after = state();
+  assert.equal(get.mock.callCount(), 1, 'Context and quiz summaries must share one learning snapshot');
+  assert.equal(after.stage, 'ready'); assert.equal(after.currentPlan!.version, 2);
+  assert.equal(after.unsubmittedQuizCount, 11);
+  assert.equal(after.recentQuizzes[0]!.submitted, true); assert.equal(after.recentQuizzes[0]!.correctCount, 3);
+  assert.doesNotMatch(JSON.stringify(after), /correctOption|explanation|selectedAnswer|contentHash/);
+  assert.deepEqual(h.store.get('authoring'), saved); assert.deepEqual(h.evidence.listSources('authoring'), sources);
+  assert.deepEqual(h.authoring.learningContext({ courseId: 'empty' }), empty);
+  assert.throws(() => h.authoring.learningContext({ courseId: 'missing' }), code('not-found'));
+  const cancelled = new AbortController(); cancelled.abort();
+  assert.throws(() => h.authoring.learningContext({ courseId: 'authoring' }, cancelled.signal), { name: 'AbortError' });
+  await h.store.update('authoring', s => ({ ...s, course: { ...s.course, status: 'archived' } }));
+  assert.equal(state().stage, 'archived');
+  await assert.rejects(h.authoring.publishQuiz(drafts.quiz), code('conflict'));
+});
+
+test('processing and failed imports never advertise authoring readiness; manual recovery refreshes context', async t => {
+  const h = await openAuthoring(); t.after(() => h.close());
+  await h.service.createCourse({ id: 'pending', title: 'Pending', subject: 'calculus', dailyMinutes: 60 });
+  let release!: () => void; const gate = new Promise<void>(r => { release = r; });
+  let fail = true;
+  const parser = { id: 'text-v1' as const, async parse(input: Parameters<TextParser['parse']>[0], signal: AbortSignal) {
+    await gate; if (fail) throw new Error('Parser failed'); return new TextParser().parse(input, signal);
+  } };
+  const evidence = new EvidenceService(h.service, new SqliteEvidenceStore(':memory:'), parser); t.after(() => evidence.close());
+  const authoring = new CourseAuthoringService(h.service, evidence);
+  const read = () => authoring.learningContext({ courseId: 'pending' });
+  const input = { filename: 'lecture.md', mimeType: 'text/markdown', text: '# Continuity\nCourse definition.' };
+  const pending = evidence.importText('pending', input);
+  const rejected = assert.rejects(pending);
+  assert.equal(read().stage, 'needs_material'); assert.equal(read().sources[0]!.status, 'processing');
+  release(); await rejected;
+  assert.equal(read().stage, 'needs_material'); assert.equal(read().sources[0]!.status, 'failed');
+  fail = false; await evidence.importText('pending', input);
+  assert.equal(read().stage, 'needs_outline'); assert.equal(read().sources[0]!.status, 'ready');
+  assert.equal(read().sources.length, 1);
+});
 
 test('grounded outline initializes unknown learner state and canonical references; retry is semantic and immutable', async t => {
   const h = await fixture(t); const d = h.drafts.outline;

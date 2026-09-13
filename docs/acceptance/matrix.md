@@ -27,6 +27,9 @@
 | 初始 StudyPlan | verified | 1..14 天、预算/任务上限、pending/v1 派生；不同重发冲突，v2 后重试仍返回原 v1 | 计划提案 |
 | Grounded quiz / key 隔离 | verified | 5 题真实来源、concept/evidence/key/重复 prompt/options 校验；同内容/满容量 retry；public result/API 无 key | Quiz 提案 |
 | 七个正式 Agent tools | verified | tests/learning-tools.test.ts：真实 DSL/canonical output、四读三写、signal、拒绝内部 mutation；单 grounding section | Agent authoring |
+| Agent 准备状态 / 有界练习摘要（本地开发版） | verified | tests/authoring.test.ts：空/processing/failed/ready/archived、同课隔离、单 snapshot、最新 10 条与总计数、已交状态；学习/证据均不被读取操作修改 | 决定下一学习动作 |
+| 模型上下文精简（本地开发版） | verified | tests/learning-tools.test.ts：完整 canonical 不变、render 不含 mastery/近期序列/重复 refs/Attempt IDs，仍展示 Weak/v2/20分钟/3题；实际 card 回放。Demo fixture 3514→2914 UTF-8 bytes；不是耗时或 token 百分比 | Agent → 学生卡片 |
+| Agent 流程语义复核（本地开发版） | verified | 真实 Harness newapi/gpt-5.6-luna：QA/不足/注入与 opaque-ID 修正后的 plan/quiz 分批复核；引用、停止课程外证明、先修/预算、逐题 key 检查通过。不是一次新的全套 release acceptance；调用预算提示的偏差见 CURRENT | 真实学习流程 |
 | P1+P2+P3 backend 闭环 | verified | demo:authoring、packed Harness Agent 发布 + HTTP submit + 新进程恢复/重试；weak/review/v2/20min/3题 | backend 全程 |
 | Authoring 失败与边界 | verified | SQLite 锁无部分写、真实队列中取消、100 distinct chunks/单 Concept 八大片段/200 quizzes 等边界 | retry/recovery |
 | Student read models | verified | tests/student.test.ts：dashboard/quiz listing/result、未提交 key 隔离、已提交反馈、authenticated/wrong-course | Web 数据 |

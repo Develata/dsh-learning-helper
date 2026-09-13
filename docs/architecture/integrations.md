@@ -29,6 +29,10 @@ PDF/MinerU、NotebookLM → EvidenceProvider、Obsidian → LearningExportSink�
 
 P3 复用上述公开 API：Host 全局注册七工具（四读、三发布），standard Agent preset 继承。CourseAuthoringService 通过 EvidenceService 验证引用后调用 LearningService，不改变作用域、数据库所有权或 Harness runtime；源码定位见 [map](../map/architecture.md)。数学分析 guidance 仅提供教学规则，不建立领域专用 service。
 
+Agent 流程调研（2026-09-13）：Anthropic [Building effective agents](https://www.anthropic.com/engineering/building-effective-agents) 的简单组合原则、[Writing effective tools](https://www.anthropic.com/engineering/writing-tools-for-agents) 的任务上下文聚合与精简模型响应，适用于当前七工具。前者是设计参考，不采用其可能随时间变化的框架推荐；本地 contract 仍以固定 Harness SHA 为准。对应实施为准备阶段/近期练习的只读 projection、model-render 白名单、同一 grounding policy 的有界恢复；不增加 agent framework、router model 或多 Agent。收益以实际输出字节与工具/语义验收记录为准，不能从文献推导本项目加速比。
+
+Skill/MCP 已有公开 seam：固定版本 `packages/skill/skill` 的 `ctx.skills.register/registerProvider` 支持摘要目录及按需正文加载，standard preset 已挂 `skill-filesystem`/`tool-skill`；`packages/mcp/mcp-client` 将 stdio / Streamable HTTP 的外部工具注册到同一 registry，当前不支持 MCP resources/prompts。Learning 插件不阻断这些能力，但没有默认接外部服务器。后续学科/教学法指导可作为按需 Skill；不可绕过的 evidence、授权、grading 约束继续留在静态 policy/domain。MCP 只用于真实外部能力缺口，按任务配置并限制工具数量/超时，不能用自然语言 memory 替代 Learner State；本轮仅核实复用边界，未新增 Skill/MCP 配置。
+
 P4 使用固定版本的 `ClientModuleRegistry` / `dsh.client`：`./client` 指向 dist/client.js，esbuild 生成当前 lazy CommonJS factory 格式。Harness 的 clientBundle preset 未公开发布（docs/cookbook/adding-a-settings-card.md），插件内仅实现其 artifact wrapper，不复制旧 teacher bundle。React/primitives 由平台共享；其余依赖声明描述 client module 关系；实际激活等待 Cordis service，slot 贡献通过 slots.inject 等待声明。
 
 原生 `sidebarRightTabs.register` + `sidebar.right.pane.tab` 挂 Learning 页面，`sidebarRight.openTab` 导航；header.actions 与空会话 input.left 挂入口，`inputActions.setDraft` 保留学生发送确认。四个 keyed `tool.call.toolview` 替代 raw authoring cards，live/replay 都只读。注册与 scoped CSS 均由 Cordis effect 释放，没有 apps/web、router 或独立 drawer。

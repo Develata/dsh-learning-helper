@@ -1,4 +1,4 @@
-# Agent tools v1 / P3
+# Agent tools v1
 
 注册七个工具（四读、三发布）；名称、args、canonical output、render 的可执行定义在 `src/tools/course-tools.ts` 与 `src/tools/learning-tools.ts`，使用 Harness 0.1.5-rc.2 的公开 defineTool 与真实 tools registry。插件启用即在 Host 作用域注册，Agent preset 继承；卸载时 Cordis effect 释放。不经过 localhost HTTP，不延迟初始化存储。
 
@@ -18,10 +18,20 @@ P3 在既有三个 read tools 上增加以下四个工具，全部调用 CourseA
 
 | Tool | 输入 → canonical output | Side effect |
 |---|---|---|
-| learning_state_get | `{courseId}` → `{course, concepts, conceptStates, reviewQueue, currentPlan, recentPlanRevision}`，后两项可为 null | 无；不包含 quizzes/keys/完整 attempts |
+| learning_state_get | `{courseId}` → 学习状态 + `stage, sources, quizCount, unsubmittedQuizCount, recentQuizzes`，详见下文 | 无；仅练习摘要，不含题目/key/完整 attempts |
 | course_outline_publish | CourseOutlineDraft → `{courseId, concepts}` | 仅空 outline 初始化 concepts + unknown ConceptState |
 | study_plan_publish | StudyPlanDraft → `{courseId, plan}` | 仅初始 v1；不覆盖 adaptive plans |
 | quiz_publish | QuizDraft → `{courseId, quiz}`（public quiz） | 保存私有 key，结果剥离 correctOption/explanation |
+
+`learning_state_get` 保留原 canonical 字段 `course, concepts, conceptStates, reviewQueue, currentPlan, recentPlanRevision`（后两项可为 null），新增只读准备状态：
+
+- `stage`：archived 优先；无 ready Source 为 needs_material；其次无 concepts 为 needs_outline、无 initial plan 为 needs_plan；其余为 ready。这只是 authoring 前置条件提示，**不是 mutation 授权或某个问题的证据充分性判断**。
+- `sources`：同课最多 32 条 `{id, filename, status, chunkCount}`，status 为 processing/ready/failed；不含 hash/corpus。没有 ready 资料时解释上传/重试需求，不轮询 processing，不循环搜空库。
+- `quizCount / unsubmittedQuizCount`：课程全部练习计数；`recentQuizzes` 为最新 10 条既有 public quiz summary（id/purpose/createdAt/itemCount/submitted/submittedAt/correctCount，未交时后两项为 null）。省略旧条目不等于不存在；旧练习从面板选取。请求“继续”时使用已有练习；请求新题时才 publish。
+
+LearningService.getAuthoringState 从**一次 committed aggregate 读取**派生状态/练习摘要；CourseAuthoringService 另读 source 元数据组合 stage，仍无跨库写操作。`output.render` 的 learning-render 白名单保留课程、concept 身份/名称/aliases/先修、status/evidenceCount、复习原因/到期、当前 plan、修订版本/原因/时间与准备/练习信息；省略 mastery、近期计数序列、重复 sourceRefs 和 Attempt IDs。Outline render 同样省略 sourceRefs/重复 courseId。完整 canonical value 保留供程序消费，course_read 的正文/定位符不压缩。现有学生 tool cards 可回放两种结果。
+
+流程策略（同一 grounding section）：显式任务 courseId 优先，缺失/歧义才 course_list；计划/练习/计划任务教学先读取最新状态，普通课程 QA 直接 search/read；成功发布后使用回执，不立即重复读状态。同一请求按需复用仍可见的已读 chunks，优先批量读 1–3 块，再为明确缺口扩展；每主题最多三次不同 focused search，仍无支持则说明局部缺口，不声称穷尽 corpus。校验失败修正字段后重试一次；conflict 读状态，不绕过；超时/丢响应保持同 draft 重试一次；取消后等用户继续。这些停止次数是模型行为 policy，硬资源约束仍由 tool timeout、容量/schema/幂等提供，不能宣称任意模型必定遵循。
 
 Draft 均为严格 JSON，不接收 Host 所有的 timestamps/status/version/mastery/sourceRefs。Outline：courseId、1..100 concepts（id、trim 后非空 name、aliases≤20、prerequisiteIds≤20、evidenceChunkIds 1..8）。Concept ids 唯一；prerequisites 必须在本 outline、无 self/cycle，DAG 检查 O(V+E)。Quiz：courseId、purpose、1..20 items（prompt、2..8 options、0-based correctOption、explanation、1..16 conceptIds、1..8 evidenceChunkIds、difficulty）。Host 按位置派生 item ID；拒绝重复 prompt/options。文本字段最多 4000 code units，集合引用必须互异。
 
@@ -37,7 +47,7 @@ Authoring policy 扩展同一 grounding section：用户要求学习计划才 se
 
 P5 语义修正：课程资料不足以支持所请求证明时，说明缺失的定义/定理并停止课程证明。一般知识默认只补充简短背景/直觉；只有用户明确请求独立课外证明才展开，必须说明外部假设与定理，不能把未验证或省略关键构造的论证称为严格证明。此规则由既有 grounding section 拥有，不改变七工具或 durable state。
 
-模型输入校验错误提供首个失败字段路径（最长 200 字符）和原因，不返回堆栈或完整输入；例如 `days.0.tasks.0.questionCount`。任务输入用两个 schema 分支表达：learn/review 不含 questionCount，practice 才可携带 1–20；持久化规则不变。发布后的聊天确认保持简短，学生在 Learning 面板查看结果，课程问答仍必须给出精确引用。
+模型输入校验错误提供首个失败字段路径（最长 200 字符）和原因，不返回堆栈或完整输入；例如 `days.0.tasks.0.questionCount`。畸形 chunkIds/evidenceChunkIds 另提示从检索结果原样复制 opaque ID，不截断、计算或生成；publish 参数说明同样明确不使用 bash 修补 ID。不会模糊匹配或自动替换引用，修正后仍经过同课 ownership 校验。任务输入用两个 schema 分支表达：learn/review 不含 questionCount，practice 才可携带 1–20；持久化规则不变。发布后的聊天确认保持简短，学生在 Learning 面板查看结果，课程问答仍必须给出精确引用。
 
 Quiz purpose 按主题描述；只有实际日期与 currentPlan.startsOn 或用户明确选择支持时才关联 Day N，不能因为题目涉及第三天主题就把第三天称为“今天”。
 

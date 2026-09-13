@@ -26,7 +26,9 @@ export function validate<T>(schema: z.ZodType<T>, value: unknown): T {
   if (!result.success) {
     const issue = result.error.issues[0];
     const path = issue?.path.map(String).join('.').slice(0, 200);
-    throw new LearningError('invalid-input', `${path ? path + ': ' : ''}${issue?.message ?? 'Invalid evidence input'}`);
+    const opaqueIdHint = issue?.code === 'invalid_format' && issue.path.some(p => p === 'evidenceChunkIds' || p === 'chunkIds')
+      ? ' Chunk IDs are opaque: copy the complete chunkId returned by evidence retrieval; do not truncate, retype, calculate or generate an ID.' : '';
+    throw new LearningError('invalid-input', `${path ? path + ': ' : ''}${issue?.message ?? 'Invalid evidence input'}${opaqueIdHint}`);
   }
   return result.data;
 }

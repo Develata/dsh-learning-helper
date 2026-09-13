@@ -10,6 +10,8 @@
 | `src/providers/evidence-sqlite.ts::SqliteEvidenceStore` | 独立 schema/transaction/FTS、恢复与查询 |
 | `src/tools/course-tools.ts::registerCourseTools` | 三个 retrieval tools + 唯一 grounding section |
 | `src/tools/learning-tools.ts::registerLearningTools` | learning_state_get 与三 publish adapters；typed input/output |
+| `src/tools/learning-render.ts::renderLearningContext/renderOutline` | 模型上下文白名单；保留 canonical 输出与学生卡片协议 |
+| `src/services/learning.ts::getAuthoringState` | 一次学习 snapshot → 状态/最新修订/有界练习摘要；AuthoringService 合并资料状态 |
 | `src/services/authoring.ts::CourseAuthoringService` | strict draft → EvidenceService.read → LearningService.publishOutline/publishInitialPlan/publishQuiz |
 | `src/domain/authoring.ts` | Draft schemas、DAG、规范化与输入数量界限 |
 | `src/presets/math-analysis/guidance.ts` | 数学分析教学 guidance，无 storage/framework |
