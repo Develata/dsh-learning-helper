@@ -229,7 +229,10 @@ export async function browserSmoke({ web, harness, plugin, work, workspacePath, 
       await picker.getByRole('button', { name: '打开', exact: true }).click();
       await picker.waitFor({ state: 'hidden' });
       await page.getByRole('button', { name: '选择工作区', exact: true }).filter({ hasText: path.split('/').at(-1) }).waitFor();
-      if (!await panel.isVisible()) await page.getByRole('button', { name: '打开学习面板', exact: true }).click();
+      // The old session's panel may still be visible while Harness finishes navigation.
+      // Both selections open a blank session, whose native sidebar starts closed.
+      await panel.waitFor({ state: 'hidden' });
+      await page.getByRole('button', { name: '打开学习面板', exact: true }).click();
       await panel.waitFor();
     }
     const otherRoot = otherWorkspacePath ?? join(work, 'other-workspace');
