@@ -6,7 +6,7 @@ Source：raw PDF SHA-256 或规范化 TXT hash 去重；同 Workspace 相同内�
 
 Generation：完整验证后一次 SQLite transaction 激活 Source.activeGenerationId 与两个 FTS 投影。search 只返回 active generation；read(chunkIds) 可读取历史代，已有 Concept/Quiz sourceRefs 不失效。数据库是 active pointer truth，filesystem provenance 为可检查的投影。模型永远不能自行提供 pageCount/随意页码；PDF.js 给出 pageCount，PDF chunk 不跨页。
 
-检索输入：query 非空且 ≤240 字符、limit 1..20；read 1..8 个唯一 chunk，总正文≤24000 字符。SQL 参数绑定，FTS terms 单独引用；Latin unicode61/BM25、长度≥3 的 CJK terms 使用 trigram，短词/FTS 不可用时只在有界 active corpus 扫描。空格是 AND，不是语义检索。返回 structured chunkId/sourceId/filename/locator/score/excerpt/citationLabel/canonicalRef；read 包含全文。
+检索输入：query 非空且 ≤200 字符、limit 1..20；read 1..8 个唯一 chunk，总正文≤24000 字符。SQL 参数绑定，FTS terms 单独引用；Latin unicode61/BM25、长度≥3 的 CJK terms 使用 trigram，短词/FTS 不可用时只在有界 active corpus 扫描。空格是 AND，不是语义检索。返回 structured chunkId/sourceId/filename/locator/score/excerpt/citationLabel/canonicalRef；read 包含全文。
 
 引用：TXT 使用真实 section/line range；PDF（含 derived MinerU Markdown）使用原 PDF filename/page。canonicalRef 来自 read；不得编造页码。资料、文件名、图片、图中的指令都是 UNTRUSTED EVIDENCE，不改变 Agent policy。
 
