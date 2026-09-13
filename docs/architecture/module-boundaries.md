@@ -9,7 +9,8 @@
 | providers/workspace-state | 每 Workspace 的单 aggregate SQLite；沿用现有 state-schema/replay，单写队列 |
 | providers/workspace-evidence | Source/generation/chunks/FTS、canonical 文件与容量；active switch 原子，历史 chunk 不删除 |
 | services/pdf、assetization | PDF archive→解析→验证→代际提交；视觉结果和 MinerU 均为不可信 draft |
-| providers/pdf-*、harness-vision、mineru | PDF.js Worker、公开 Harness LLM/attachment、官方 MinerU protocol 2；不访问学习状态 |
+| providers/pdf-*、harness-vision、mineru* | PDF.js Worker、公开 Harness LLM/attachment、MinerU 自托管 protocol2 / cloud v4 与受限 ZIP；不访问学习状态 |
+| services/mineru-access | 通过公开 Harness credentials record 保存每个稳定 projectId 的云端密钥，返回无 secret 的状态；构建所选 adapter，Workspace 文件不拥有密钥 |
 | host / tools | authenticated Session address / exec.agent.session.id → WorkspaceProjects；只适配输入输出，不选 filesystem scope |
 | client | Harness Session/Workspace observable、原生 sidebar/tool views；浏览器仅保存选择、草稿、请求状态和任务会话书签 |
 

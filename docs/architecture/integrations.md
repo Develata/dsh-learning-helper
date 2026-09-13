@@ -6,7 +6,7 @@
 - defineTool / systemPrompt.section：七工具与一份 grounding policy；普通 QA 不授权 outline/plan/quiz mutation。
 - LlmService.prepareCall / prepared.stream、Agent.options、AttachmentService.saveImages：复用当前模型与官方图片输入。PDF 页先在 Worker 渲染 PNG；模型必须显式声明 image modality。未具备能力时明确 gate，不假装视觉成功。Harness attachment 是 transport copy，Workspace PDF/代际文本为学习 provenance authority。
 - Mozilla pdfjs-dist 6.3.289：本地文本/页数/页渲染，Apache-2.0；不实现自研 PDF parser。
-- MinerU：可选外部自托管 API protocol 2，未打包 Python/OCR/模型；[已核对协议](https://github.com/opendatalab/MinerU/blob/4fe4bde114a23ee5dd637eae99b767f4669bf58c/mineru/cli/fast_api.py)。不兼容冒称 SaaS v4。Token 仅 runtime environment；workspace config 无 secret。
+- MinerU：可选外部自托管 API protocol 2，未打包 Python/OCR/模型；[已核对协议](https://github.com/opendatalab/MinerU/blob/4fe4bde114a23ee5dd637eae99b767f4669bf58c/mineru/cli/fast_api.py)。现新增独立 SaaS v4 adapter 与 Web 云端密钥设置；self-hosted Token 仍为 runtime environment，cloud key 使用公开 Harness credentials record；workspace config 无 secret。协议与安全边界见 [ADR-0007](../adr/0007-mineru-cloud-credentials.md)。已发布 v0.2.1 镜像仍只有自托管 adapter。
 - dsh-open-file、NotebookLM、Obsidian、DeepTutor、向量服务：deferred，不在运行依赖路径。
 
 native dsh.client 继续复用 sidebar、slots、Session/Workspace client controllers、primitives。客户端学习请求走 authenticated same-origin session routes；没有独立 SPA/router。

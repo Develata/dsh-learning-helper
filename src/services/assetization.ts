@@ -24,7 +24,7 @@ export class Assetization {
   private readonly running = new Map<string, Promise<void>>();
   private readonly stopping = new AbortController();
   constructor(private readonly root: string, private readonly store: WorkspaceEvidenceStore,
-    private readonly factory: (config: MinerUConfig) => DocumentAssetizer = c => new MinerUAssetizer(c, process.env.LEARNING_HELPER_MINERU_TOKEN),
+    private readonly factory: (config: MinerUConfig, signal: AbortSignal) => DocumentAssetizer | Promise<DocumentAssetizer> = c => new MinerUAssetizer(c, process.env.LEARNING_HELPER_MINERU_TOKEN),
     private readonly pollMs = 2000) {}
   private path(id: string) { return `.learning-helper/generations/${id}/mineru-job.json`; }
   private load(id: string): Job | undefined {
@@ -48,24 +48,25 @@ export class Assetization {
     if (source.parsing === 'processing') throw new LearningError('conflict', 'PDF parsing is still active; wait before MinerU conversion');
     const existing = this.running.get(sourceId); if (existing) return { accepted: true, done: existing };
     const config = readConfig(this.root).documentParsing.mineru;
-    if (!config.enabled || !config.baseUrl) throw new LearningError('unavailable', 'Configure MinerU before conversion');
+    if (!config.enabled || (config.provider !== 'cloud' && !config.baseUrl)) throw new LearningError('unavailable', 'Configure MinerU before conversion');
+    if (config.provider === 'cloud' && source.pageCount > 200) throw new LearningError('limit-exceeded', 'MinerU cloud supports at most 200 PDF pages per task');
     const configKey = hashText(JSON.stringify(config)); const old = this.load(sourceId);
     if (old?.state === 'ready' && old.configKey === configKey && source.assetization === 'ready') return { accepted: false, done: Promise.resolve() };
     if (old && ['submitting', 'outcome-unknown'].includes(old.state) && !retryUnknown) throw new LearningError('conflict', 'Previous MinerU submission outcome unknown; check provider, then explicitly confirm retry');
     if (activeJobs >= 2) throw new LearningError('unavailable', 'Two MinerU conversions are active; retry later');
-    const adapter = this.factory(config);
     const job: Job = old?.taskId && old.configKey === configKey && old.state === 'submitted' ? old
       : { sourceId, configKey, state: 'submitting', updatedAt: new Date().toISOString() };
     this.save(job); this.store.assetization(sourceId, 'processing'); activeJobs++;
     const combined = AbortSignal.any([signal, this.stopping.signal, AbortSignal.timeout(config.timeoutSeconds * 1000)]);
-    const done = this.run(job, adapter, combined);
+    const done = this.run(job, config, combined);
     this.running.set(sourceId, done);
     const release = () => { activeJobs--; this.running.delete(sourceId); };
     void done.then(release, release); return { accepted: true, done };
   }
-  private async run(job: Job, adapter: DocumentAssetizer, signal: AbortSignal): Promise<void> {
+  private async run(job: Job, config: MinerUConfig, signal: AbortSignal): Promise<void> {
     let submitted = !!job.taskId;
     try {
+      const adapter = await this.factory(config, signal); signal.throwIfAborted();
       await adapter.health(signal);
       const source = this.store.getSource(job.sourceId);
       if (!job.taskId) {
@@ -76,7 +77,7 @@ export class Assetization {
       }
       await awaitMinerU(adapter, await adapter.status(job.taskId!, signal), signal, this.pollMs);
       const output = await adapter.result(job.taskId!, source.pageCount!, signal); signal.throwIfAborted();
-      const generation = `gen_${hashText(`mineru:${job.taskId}`)}`;
+      const generation = `gen_${hashText(`mineru:${job.configKey}:${job.taskId}`)}`;
       const mediaPrefix = `media/${source.id}/${generation}/`;
       const replaceMedia = (text: string) => text.replace(/images\/([a-zA-Z0-9_-]+\.(?:png|jpe?g|webp))/giu, (_all, name: string) => mediaPrefix + name);
       // Only validated names are used as paths. Original response Markdown is retained as a derived artifact.

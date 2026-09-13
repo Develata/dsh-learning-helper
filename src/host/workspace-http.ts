@@ -11,9 +11,10 @@ import { receivePdf } from './pdf-upload.js';
 import { filenameSchema } from '../domain/evidence.js';
 import { pdfModeSchema } from '../domain/assets.js';
 import { readConfig, writeConfig } from '../workspace/config.js';
+import type { MinerUAccess } from '../services/mineru-access.js';
 
 /** Authenticated session address is resolved through Harness membership on every request. */
-export function workspaceHandler(projects: WorkspaceProjects, reject: (req: IncomingMessage) => 401 | 403 | undefined, log: (error: unknown) => void) {
+export function workspaceHandler(projects: WorkspaceProjects, reject: (req: IncomingMessage) => 401 | 403 | undefined, log: (error: unknown) => void, mineru?: MinerUAccess) {
   return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     const abort = new AbortController();
     const disconnected = () => { if (!res.writableFinished) abort.abort(new DOMException('Client disconnected', 'AbortError')); };
@@ -24,7 +25,7 @@ export function workspaceHandler(projects: WorkspaceProjects, reject: (req: Inco
       if (rejection) { res.setHeader('connection', 'close'); respond(rejection, { error: { code: rejection === 401 ? 'unauthorized' : 'forbidden', message: 'Open the authenticated Learning Helper session' } }); return; }
       const url = new URL(req.url ?? '/', 'http://localhost');
       if (/^\/learning-helper\/v[12]\/health$/.test(url.pathname) && req.method === 'GET') { respond(200, { status: 'ready', schemaVersion: 2 }); return; }
-      const route = /^\/learning-helper\/v2\/sessions\/([a-zA-Z0-9_-]{1,80})\/(project|config|capabilities|assetize|dashboard|sources(?:\/(?:text|pdf))?|evidence\/(?:search|read)|submissions|quizzes(?:\/([a-zA-Z0-9_-]+)(\/result)?)?)$/.exec(url.pathname);
+      const route = /^\/learning-helper\/v2\/sessions\/([a-zA-Z0-9_-]{1,80})\/(project|config|mineru-credential|capabilities|assetize|dashboard|sources(?:\/(?:text|pdf))?|evidence\/(?:search|read)|submissions|quizzes(?:\/([a-zA-Z0-9_-]+)(\/result)?)?)$/.exec(url.pathname);
       if (!route) { respond(404, { error: { code: 'not-found', message: 'Route not found' } }); return; }
       const sessionId = route[1]!; const resource = route[2]!;
       if (resource === 'project') {
@@ -32,6 +33,13 @@ export function workspaceHandler(projects: WorkspaceProjects, reject: (req: Inco
         if (req.method === 'POST') { respond(201, { project: await projects.initialize(sessionId, await readBody(req)) }); return; }
       }
       await projects.use(sessionId, abort.signal, async (p, signal) => {
+        if (resource === 'mineru-credential') {
+          res.setHeader('cache-control', 'no-store');
+          if (!mineru) throw new LearningError('unavailable', 'MinerU credential storage unavailable');
+          if (req.method === 'GET') { respond(200, await mineru.status(p.projectId, signal)); return; }
+          if (req.method === 'POST') { respond(200, await mineru.save(p.projectId, await readBody(req, 16 * 1024), signal)); return; }
+          if (req.method === 'DELETE') { respond(200, await mineru.remove(p.projectId, signal)); return; }
+        }
         if (resource === 'config') {
           if (req.method === 'GET') { respond(200, readConfig(p.root)); return; }
           if (req.method === 'POST') { respond(200, writeConfig(p.root, await readBody(req))); return; }

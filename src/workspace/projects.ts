@@ -14,6 +14,8 @@ import { cancelled } from '../services/cancellation.js';
 import { WorkspaceResolver, readManifest, initializeProject } from './context.js';
 import type { WorkspaceContext, ProjectManifest } from './context.js';
 import { workspaceDatabasePath } from './files.js';
+import type { DocumentAssetizer } from '../providers/mineru.js';
+import type { MinerUConfig } from './config.js';
 
 export interface WorkspaceProject extends WorkspaceContext {
   readonly manifest: ProjectManifest;
@@ -32,7 +34,8 @@ export class WorkspaceProjects {
   private readonly stopping = new AbortController();
   private closed: Promise<void> | undefined;
   private acquisition: Promise<unknown> = Promise.resolve();
-  constructor(readonly resolver: WorkspaceResolver, private readonly vision: DocumentVisionProvider = noVision) {}
+  constructor(readonly resolver: WorkspaceResolver, private readonly vision: DocumentVisionProvider = noVision,
+    private readonly assetizer?: (projectId: string, config: MinerUConfig, signal: AbortSignal) => DocumentAssetizer | Promise<DocumentAssetizer>) {}
   async visionAvailable(sessionId: string, signal: AbortSignal): Promise<boolean> {
     this.resolver.resolve(sessionId);
     const bounded = AbortSignal.any([signal, this.stopping.signal, AbortSignal.timeout(5000)]);
@@ -89,7 +92,7 @@ export class WorkspaceProjects {
             const assets = new WorkspaceEvidenceStore(root, manifest.projectId); openedAssets = assets;
             const evidence = new EvidenceService(learning, assets, new TextParser());
             const pdf = new PdfSources(root, manifest.projectId, assets, undefined, this.vision);
-            const assetization = new Assetization(root, assets); assetization.recover();
+            const assetization = new Assetization(root, assets, this.assetizer ? (config, signal) => this.assetizer!(manifest.projectId, config, signal) : undefined); assetization.recover();
             entry = { project: { root, projectId: manifest.projectId, manifest, learning, evidence, assets, pdf, assetization, authoring: new CourseAuthoringService(learning, evidence) },
               active: 0, touched: Date.now(), close: async () => { await Promise.all([pdf.close(), assetization.close()]); await evidence.close(); await store.close(); } };
             this.entries.set(root, entry);

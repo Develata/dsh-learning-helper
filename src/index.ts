@@ -8,9 +8,10 @@ import { WorkspaceProjects } from './workspace/projects.js';
 import { workspaceHandler } from './host/workspace-http.js';
 import { registerWorkspaceTools } from './tools/workspace-tools.js';
 import { HarnessDocumentVision } from './providers/harness-vision.js';
+import { MinerUAccess } from './services/mineru-access.js';
 
 export const name = 'learning-helper';
-export const inject = ['workspaceRegistry', 'webServer', 'connection', 'tools', 'systemPrompt', 'llm', 'agents'];
+export const inject = ['workspaceRegistry', 'webServer', 'connection', 'tools', 'systemPrompt', 'llm', 'agents', 'credentials'];
 export interface Config {}
 export const Config: z<Config> = z.object({});
 
@@ -19,9 +20,10 @@ export async function apply(ctx: Context, _config: Config): Promise<void> {
   // Public WorkspaceRegistry projection; membership already validates the Session header cwd.
   const registry = ctx.workspaceRegistry;
   const vision = new HarnessDocumentVision(ctx);
-  const projects = new WorkspaceProjects(new WorkspaceResolver(() => registry.list()), vision);
+  const mineru = new MinerUAccess(ctx.credentials);
+  const projects = new WorkspaceProjects(new WorkspaceResolver(() => registry.list()), vision, (projectId, config, signal) => mineru.adapter(projectId, config, signal));
   ctx.effect(() => () => projects.close());
   ctx.effect(() => ctx.webServer.register({ kind: 'prefix', path: '/learning-helper',
-    handler: workspaceHandler(projects, req => ctx.connection.requestRejection(req), error => ctx.logger.error(error)) }));
+    handler: workspaceHandler(projects, req => ctx.connection.requestRejection(req), error => ctx.logger.error(error), mineru) }));
   registerWorkspaceTools(ctx, projects, vision);
 }
