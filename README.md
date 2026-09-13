@@ -50,16 +50,26 @@ flowchart LR
 
 ## 快速开始
 
-v0.2 目前保留在 `feat/workspace-v02` 分支，尚未发布 tag；默认分支与 `v0.1.0` 仍用于已发布版本。公式显示、review 修复和演示素材已推送到该开发分支；以下 Docker 流程仍以运行壳版本锁中的 exact plugin SHA 为构建输入，源码推送与容器实际部署的区别见 [CURRENT](docs/CURRENT.md)。运行壳与部署文件在 [Develata/learning-helper](https://github.com/Develata/learning-helper)：
+v0.2.0 使用两个仓库的同名 tag 发布；默认分支和 v0.1.0 保持原有版本。发布成功后可直接拉取 **linux/amd64** 镜像，无需本机构建或安装 Node/pnpm：
 
 ```bash
-git clone --branch feat/workspace-v02 https://github.com/Develata/learning-helper.git
-cd learning-helper/deploy/learning-helper
-docker compose up --build -d
+docker pull ghcr.io/develata/learning-helper:0.2.0
+```
+
+推荐下载 [运行壳 Release](https://github.com/Develata/learning-helper/releases/tag/v0.2.0) 附带的 Compose，它固定到验收镜像的 SHA-256 digest，并保留 `/data`、Workspace 和 `127.0.0.1:3010`：
+
+```bash
+mkdir learning-helper-deploy
+cd learning-helper-deploy
+curl -fL https://github.com/Develata/learning-helper/releases/download/v0.2.0/compose.yml -o compose.yml
+docker compose pull
+docker compose up -d
 docker compose exec learning-helper node /opt/learning-helper/open.mjs
 ```
 
-打开最后一条命令返回的本机登录地址，在 Harness 模型设置中配置 provider，选择/创建本地 Workspace，随后打开“学习”面板。凭证只在运行时配置，不进入 Git、Dockerfile 或聊天。版本锁、持久化与故障处置见 [部署说明](https://github.com/Develata/learning-helper/blob/feat/workspace-v02/deploy/learning-helper/README.zh.md)。体验当前 checkout 使用 [本地运行](docs/operations/local-dev.md) / [Harness local link](docs/operations/harness-integration.md)。
+打开最后一条命令返回的本机登录地址，在 Harness 模型设置配置 provider，选择/创建本地 Workspace，随后打开“学习”面板。凭证仅在运行时配置。GHCR 首次建包默认私有，维护者须在包设置中改为 Public 才能匿名拉取；若返回 denied，见[发布与排障](docs/operations/release.md)。已有 v0.1 数据先按迁移说明备份和迁移，不能直接覆盖旧实例。
+
+需要源码构建、修改端口或自定义挂载时，见[部署说明](https://github.com/Develata/learning-helper/blob/feat/workspace-v02/deploy/learning-helper/README.zh.md)。开发与本地链接仍见 [local-dev](docs/operations/local-dev.md) / [Harness integration](docs/operations/harness-integration.md)。
 
 ## 原创贡献与复用
 
