@@ -30,6 +30,18 @@ test('plan snapshot labels do not pretend a published v1 is the current adaptive
   assert.ok(statusRank.weak < statusRank.strong);
 });
 
+test('compact plan receipts render actual days and minutes; malformed receipts use a safe fallback', () => {
+  const receipt = { projectId: 'project', planId: 'plan', version: 1, days: [{ day: 1, totalMinutes: 45 }, { day: 2, totalMinutes: 60 }] };
+  const card = toolCardModel('study_plan_publish', settled(receipt));
+  assert.equal(card.title, '2 天学习计划 · 发布时 v1');
+  assert.deepEqual(card.lines, ['Day 1 · 45 分钟', 'Day 2 · 60 分钟']);
+  for (const patch of [{ planId: '../plan' }, { version: null }, { days: [] }, { days: [{ day: 2, totalMinutes: 60 }] },
+    { days: [{ day: 1, totalMinutes: 241 }] }, { days: [{ day: 1, totalMinutes: '60' }] }]) {
+    const fallback = toolCardModel('study_plan_publish', settled({ ...receipt, ...patch }));
+    assert.equal(fallback.action, '打开学习面板'); assert.deepEqual(fallback.lines, []);
+  }
+});
+
 test('quiz receipt cards preserve navigation and reject malformed counts without needing full questions', () => {
   const receipt = { courseId: 'course', quizId: 'quiz', itemCount: 5, openIn: 'Learning panel' };
   const card = toolCardModel('quiz_publish', settled(receipt));

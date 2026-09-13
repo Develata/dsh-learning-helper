@@ -17,6 +17,7 @@ import { registerWorkspaceTools } from '../src/tools/workspace-tools.js';
 import { workspaceHandler } from '../src/host/workspace-http.js';
 import { groundedDrafts } from './authoring-helpers.js';
 import type { EvidenceHit } from '../src/domain/evidence.js';
+import { toolCardModel } from '../src/client/tool-model.js';
 
 test('session-bound real ToolRuntime and authenticated HTTP connect workspace evidence to adaptive learning', { timeout: 20_000 }, async t => {
   const parent = mkdtempSync(join(tmpdir(), 'lh-workspace-tools-')); const a = join(parent, 'a'); const b = join(parent, 'b'); mkdirSync(a); mkdirSync(b);
@@ -59,6 +60,14 @@ test('session-bound real ToolRuntime and authenticated HTTP connect workspace ev
   for (const [name, { courseId: _id, ...draft }] of [['course_outline_publish', drafts.outline], ['study_plan_publish', drafts.plan], ['quiz_publish', drafts.quiz]] as const) {
     const result = await invoke(name, draft); assert.deepEqual(await invoke(name, draft), result);
     assert.doesNotMatch(JSON.stringify(result), /courseId|correctOption|explanation/);
+    if (name === 'study_plan_publish') {
+      const receipt = await dispatch(name, draft);
+      const card = toolCardModel(name, { kind: 'tool-result', callId: 'plan-card', call: null, callTime: 0,
+        time: 0, seq: 1, isError: false, subCalls: [], content: receipt.content });
+      assert.equal(card.title, '3 天学习计划 · 发布时 v1');
+      assert.deepEqual(card.lines, drafts.plan.days.map(day => `Day ${day.day} · ${day.tasks.reduce((sum, task) => sum + task.estimatedMinutes, 0)} 分钟`));
+      assert.equal(card.navigation?.section, 'plan');
+    }
   }
   const dashboard = await (await http('session-a', 'dashboard')).json();
   const quizId = dashboard.quizzes[0].id;

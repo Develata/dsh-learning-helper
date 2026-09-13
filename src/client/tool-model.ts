@@ -30,9 +30,23 @@ export function toolCardModel(name: LearningToolName, block: ToolCallBlock): Too
       return { title: `${n} 题练习已生成`, lines: ['准备好后开始作答，提交后查看讲解。'], navigation: { projectId, quizId, section: 'quiz' }, action: '开始练习' };
     }
     if (name === 'study_plan_publish') {
+      if (value.planId !== undefined) {
+        const version = count(value.version, 101);
+        if (!id(value.planId) || !version || !Array.isArray(value.days) || !count(value.days.length, 14)) return fallback;
+        const lines: string[] = [];
+        for (const [index, raw] of value.days.entries()) {
+          const day = record(raw); const minutes = count(day?.totalMinutes, 240);
+          if (day?.day !== index + 1 || !minutes) return fallback;
+          lines.push(`Day ${day.day} · ${minutes} 分钟`);
+        }
+        return { title: `${lines.length} 天学习计划 · 发布时 v${version}`, lines,
+          navigation: { projectId, section: 'plan' }, action: '查看当前计划' };
+      }
+      // Older sessions retain the full plan; replay must continue to understand it.
       const plan = record(value.plan); const version = count(plan?.version, 101);
       const days = Array.isArray(plan?.days) ? plan.days.slice(0, 14) : [];
-      return { title: `${days.length} 天学习计划 · 发布时 v${version ?? 1}`, lines: days.map((raw, index) => {
+      if (!version || !days.length) return fallback;
+      return { title: `${days.length} 天学习计划 · 发布时 v${version}`, lines: days.map((raw, index) => {
         const day = record(raw); const tasks = Array.isArray(day?.tasks) ? day.tasks.slice(0, 50) : [];
         const descriptions = tasks.flatMap(rawTask => {
           const task = record(rawTask); const type = task?.type; const minutes = count(task?.estimatedMinutes, 240);
