@@ -27,7 +27,7 @@
 | actual multimodal / real MinerU | blocked | 最近外部验收时模型未声明 image、未配置官方 MinerU；本轮未重查运行环境或重跑服务 |
 | standalone / final full regression | verified | 无sibling的新副本 frozen install/typecheck/156 tests/build/pack；本地5个demo和packed restart |
 | Docker cold boot/restart at aad1263 | verified | 已保存的no-cache/new-volume/Chromium/auth/restart回执；与此前a0fa0c6运行文件等价，不覆盖后续本地修复 |
-| Docker with current published runtime fixes | planned | 68ba236 build/health通过，Chromium暴露任务会话follow竞态；修复后packed通过，完整Docker复验待运行 |
+| Docker / GHCR v0.2.1 | verified | [镜像CI](https://github.com/Develata/learning-helper/actions/runs/34778266086)：b63399c构建镜像、冷启动、完整Chromium、认证/Origin、重启通过；Release回执与digest校验、空Docker凭据目录匿名pull通过 |
 | v0.2 screenshots / captioned video | verified | 真实 packed Chromium、四张PNG、115秒H.264全片解码；作者draft为fixture，说明与入口见 [DEMO](../DEMO.md#仓库演示素材) |
 | dependency scope review | verified | plugin production audit0；实际Docker runtime24条固定upstream风险，见COMPATIBILITY；不声称全部不可达 |
 | no Harness runtime patch | verified | upstream c291e796 对 packages/apps 0 diff |

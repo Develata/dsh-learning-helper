@@ -50,7 +50,7 @@ flowchart LR
 
 ## 快速开始
 
-v0.2.1 使用两个仓库的同名 tag 发布；默认分支和 v0.1.0 保持原有版本。发布成功后可直接拉取 **linux/amd64** 镜像，无需本机构建或安装 Node/pnpm：
+v0.2.1 已通过两个仓库的同名 tag CI 发布；默认分支和 v0.1.0 保持原有版本。可直接匿名拉取 **linux/amd64** 镜像，无需本机构建或安装 Node/pnpm：
 
 ```bash
 docker pull ghcr.io/develata/learning-helper:0.2.1

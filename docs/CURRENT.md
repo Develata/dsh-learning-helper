@@ -1,42 +1,43 @@
 # 当前状态
 
-v0.2 开发分支 `feat/workspace-v02`。全局 review 修复、数学显示、新版录屏及文档整理已推送。本轮按用户授权准备 v0.2.1 tag-only Release CI 与 GHCR 镜像；发布状态以两仓同名 tag 的 Actions/Release 为准，不替换日常实例。
+**v0.2.1 已发布**。两仓 tag-only CI 全部通过，插件包、GHCR镜像及固定digest的Compose已发布；匿名docker pull通过。工作分支为 `feat/workspace-v02`，默认分支与已有tag保持原位，未升级日常实例。
 
-发布流程见 [release](operations/release.md)：并行验证、一次构建、测试镜像原样发布、固定digest的Compose。版本号升为0.2.1；新增版本约束回归与发行文件，并修复Docker验收暴露的任务会话创建回执早于Workspace follow导致误拒绝的竞态。本地已通过typecheck、156项测试（130 backend/script +26 client）、build、5个demo、pack、standalone及真实packed/Chromium/重启；workflow通过actionlint。CI产物以两仓tag run与Release回执核实，历史LLM/Docker回执仍按原范围引用。
+本轮新增发行CI、版本校验与pull-only部署文档；Docker验收暴露并修复任务会话创建回执早于Workspace follow的竞态（`8c18da1`）。使用公开订阅确认归属，5秒deadline、取消清理、异属拒绝及等待期间导航变化均有回归；Harness runtime仍0 patch。
 
-## 版本与发布边界
+## 发布引用
 
-| 对象 | 最近核实的事实（2026-09-13） |
+| 对象 | 已核实的引用 |
 |---|---|
-| 已推送主变更批次 | `0ffef0d` → `766833d`，10个逻辑提交，含数学显示、review修复、录屏与文档 |
-| 最近验证的产品运行代码 | `635009c2679ff8e7cb46faf63710aaa4942d55f9`；后续为测试、录制和文档 |
-| 当前插件发布引用 | origin/feat/workspace-v02；含本页的收尾提交以Git分支HEAD为准，不在自身写入自引用SHA |
-| 运行壳版本 pin | exact plugin SHA由[运行壳版本锁](https://github.com/Develata/learning-helper/blob/feat/workspace-v02/deploy/learning-helper/versions.lock.json)拥有；更新源码pin不表示已构建或替换容器 |
-| 已冻结 v0.1.0 / origin/main | `958cf67627736232d06a9eeee70cdcb2c0369248`；v0.2.0 tag已推送但未产生Actions run；修复使用新v0.2.1，不改写已有tag |
+| 插件 annotated v0.2.1 | `b63399cae9a647667baa36b44bfb3ad9ead39f84`；[CI](https://github.com/Develata/dsh-learning-helper/actions/runs/34777916261)、[Release](https://github.com/Develata/dsh-learning-helper/releases/tag/v0.2.1) |
+| 运行壳 annotated v0.2.1 | `6e057f5c26e1899f6e81bf291a94223b123ddec3`；[CI](https://github.com/Develata/learning-helper/actions/runs/34778266086)、[Release](https://github.com/Develata/learning-helper/releases/tag/v0.2.1) |
+| 镜像 | `ghcr.io/develata/learning-helper:0.2.1`，linux/amd64 |
+| 镜像 digest | `sha256:9a413606f9c1b15053a98372b279da9fe8d955fe3bb0c3549275eddf6a39f032` |
+| 当前开发分支 | 本页为发布后验收记录，branch HEAD由Git拥有；不把后续文档提交冒充tag构建输入 |
+| 冻结 v0.1.0 / origin/main | `958cf67627736232d06a9eeee70cdcb2c0369248`；迁移必须offline显式执行 |
 
-Harness 固定版本与依赖风险由 [COMPATIBILITY](../COMPATIBILITY.md) 拥有；`packages/`、`apps/` 相对固定upstream仍为0 diff。远端、运行壳pin、实测镜像与本地HEAD是不同对象。
+Harness固定SHA、Node/pnpm与依赖风险见 [COMPATIBILITY](../COMPATIBILITY.md)。镜像Release的versions.lock.json拥有实际构建输入，harnessForkSha不是包含此lock的metadata commit。
 
-## 可用能力与证据
+## 验证
 
-Workspace隔离、双库/相对资产、TXT/MD/PDF本地解析、代际切换与历史引用、显式v1迁移、七工具作者闭环、Weak→重排、学生UI/任务会话/数学显示已实现。支持范围见 [product](product.md)，逐项证明见 [matrix](acceptance/matrix.md)。最近review修复了缓存代未激活、PDF默认模式未继承、binary上传超时过短及精简plan回执卡片误显示0天。
-
-| 验证面 | 最近证据 / 限制 |
+| 验证面 | 证据 / 范围 |
 |---|---|
-| 本地回归 | 2026-09-13 release准备：typecheck、156/156（130 backend/script +26 client）、build、5个demo、pack与standalone全部通过 |
-| packed / 浏览器 | 本轮`artifacts/integration-result.json`为68ba236+任务会话修复/0.2.1 dirty工作树的build/pack/安装/认证/A-B/完整browser smoke/重启证明；semanticLlmRun=false。录屏另有独立recording.json |
-| 全面学生UI检查 | 上轮 `/tmp/lh-review-browser/result.json` 与对应截图覆盖丢包重试、刷新、Workspace、PDF默认/覆盖、卡片、数学/键盘/错误状态及1440/1024/390 light/dark；临时文件不保证长期保留 |
-| 仓库演示 | [DEMO](DEMO.md#仓库演示素材)：四张PNG、115秒中文字幕MP4；实际packed Web与fixture作者draft，pageErrors=[]、重启/全片解码/画面检查通过。局部回执在artifacts/demo-v02/recording.json |
-| 真实LLM | 2026-09-13 newapi/gpt-5.6-luna的六场景与修复后authoring复验分别有范围；具体JSON/语义状态见 [golden path](acceptance/golden-path.md#真实模型语义验收)。本轮未调用模型 |
-| Docker | 本轮68ba236锁定镜像build/health通过，但Chromium任务会话竞态使整体验收failed；`8c18da1`修复已通过packed/Chromium，修复后的Docker验收待运行。历史aad1263回执不覆盖此修复 |
+| 本地回归 | typecheck、156/156（130 backend/script +26 client）、build、5个demo、pack、diff检查通过 |
+| standalone | 无sibling副本的frozen install/typecheck/156 tests/build/pack通过 |
+| packed / 浏览器 | 修复后真实Harness安装、A/B、MD/PDF、数学/卡片、作者工具、quiz丢包重试、Weak/v2、任务会话、刷新及重启通过；fixture Agent，不是新LLM验收 |
+| 发布包 | 插件CI通过；Release tgz/SHA256SUMS下载校验成功；185个dist文件与本地已测试构建逐一一致 |
+| Docker CI | 运行壳CI先构建一次，EXTERNAL模式验收该镜像：coldBoot/browser/restartPersistence/authAndOrigin全部PASS，再原样传给publish；不是声称每次no-cache |
+| GHCR / 附件 | 空Docker凭据目录匿名pull完成，digest与Release相同；Compose/versions.lock/docker-result/image-digest全部SHA256校验成功 |
+| Harness检查 | 9 deployment tests、16 doc-quick、34 doc-sync、lint与push hook/typecheck通过；packages/apps对固定upstream0 diff |
+| 实际模型 | 历史newapi/gpt-5.6-luna六场景及authoring复验的独立范围见 [golden path](acceptance/golden-path.md#真实模型语义验收)；本轮没有调用模型 |
 
-上述artifacts回执是本地可覆盖输出，必须核对其中SHA、dirty与模式，不能仅凭同名文件继承旧PASS。容量测量与复现命令只在 [local-dev](operations/local-dev.md) 维护。
+本地artifacts可被后续执行覆盖；远端Release的docker-result.json与image-digest.txt是本次发行的稳定回执。本地从GHCR匿名拉取后的v0.2.1已再次通过独立volume、3012端口的完整Chromium/认证/重启验收，回执为artifacts/docker-result.json；未改动日常3010实例。
 
-## 未验证项与限制
+## 能力与限制
 
-最近外部验收时模型未声明image能力、未配置官方MinerU；真实multimodal/MinerU仍未验证，本轮不重新探测凭据或运行环境。fake provider、普通PDF.js和演示录屏不替代外部服务质量证明。
+Workspace隔离、双库/相对资产、TXT/MD/PDF本地解析、代际切换与历史引用、显式v1迁移、七工具作者闭环、Weak→重排、学生UI/任务会话/数学显示已实现。范围与逐项证明见 [product](product.md)、[matrix](acceptance/matrix.md)。[DEMO](DEMO.md#仓库演示素材)包含四张PNG及115秒中文字幕MP4；作者draft是fixture。
 
-每个本地Workspace只允许一个Host写入，不支持NFS/SMB/同步盘并发SQLite；不删除历史generation或引用；v1必须offline显式迁移；原始session/debug/export不是考试防作弊边界。精确限额与失败模型见 [Evidence](contracts/evidence.md)、[Persistence](contracts/persistence.md)、[Web UI](contracts/web-ui.md)。
+真实multimodal/MinerU仍未验证：最近外部验收时模型未声明image能力，未配置官方MinerU。每个本地Workspace只允许一个Host写入；不支持NFS/SMB/同步盘并发SQLite，不删除历史generation；原始session/debug/export不是考试防作弊边界。
 
-发布阻塞：2026-09-13插件v0.2.0已推送，Actions enabled，但API无workflow run；用户确认页面无启用/账号限制提示。tag含正确workflow，推送为用户OAuth凭据；目前原因未确定，不能宣称Release/GHCR已发布。
+v0.2.0首次tag推送未生成Actions run；当时API enabled且用户确认页面无启用/账号限制提示，原因未确定。已有tag保持不变，实际运行缺陷修复后发布的新v0.2.1已全绿，不再是当前阻塞。
 
-下一步：① 推送已验证修复与v0.2.1，复核tag事件；② 修复版Docker验收及两仓Release/GHCR digest核实；③ 使用Release Compose显式升级实例。image/MinerU真实外部服务验收仍独立，不能由CI fixture替代。
+下一步：① 按 [README](../README.md#快速开始) 或Release Compose显式部署；② 使用 [DEMO](DEMO.md) 演示当前闭环；③ 只有获得可用服务环境后，单独验收真实vision/MinerU，不将fixture结论扩大为真实服务质量。
