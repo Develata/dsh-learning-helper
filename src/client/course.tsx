@@ -46,7 +46,7 @@ import type { WorkspaceConfig } from '../workspace/config.js';
 import { useResource } from './resource.js';
 export function Sources({ sessionId, sources, reload }: { sessionId: string; sources: Source[]; reload: () => void }) {
   const [file, setFile] = useState<File | null>(null); const [busy, setBusy] = useState(false);
-  const [mode, setMode] = useState<PdfMode>('auto'); const [optimize, setOptimize] = useState(true);
+  const [modeOverride, setMode] = useState<PdfMode>(); const [optimize, setOptimize] = useState(true);
   const [error, setError] = useState(''); const [notice, setNotice] = useState(''); const [configReload, setConfigReload] = useState(0);
   const [pendingOptimization, setPendingOptimization] = useState<string | null>(null);
   const retryAction = useRef<(() => void) | null>(null);
@@ -55,6 +55,7 @@ export function Sources({ sessionId, sources, reload }: { sessionId: string; sou
     const [config, capability] = await Promise.all([request<WorkspaceConfig>(base + '/config', signal), request<{ vision: boolean }>(base + '/capabilities', signal)]);
     return { config, capability };
   }, configReload);
+  const mode = modeOverride ?? (settings.status === 'success' ? settings.data.config.documentParsing.pdfMode : 'auto');
   const vision = settings.status === 'success' && settings.data.capability.vision;
   const configured = settings.status === 'success' && settings.data.config.documentParsing.mineru.enabled;
   const pending = sources.filter(s => s.status === 'processing' || s.parsing === 'processing' || s.assetization === 'processing').map(s => s.id).join(',');
@@ -113,7 +114,7 @@ export function Sources({ sessionId, sources, reload }: { sessionId: string; sou
       <label><span><input type="checkbox" checked={optimize} disabled={!configured} onChange={e => setOptimize(e.target.checked)}/>使用 MinerU 转换为长期 Markdown 资产（推荐）</span></label>
       <p className="lh-muted">转换后 Agent 优先读取规范化资料；原始 PDF 用于公式、图片和出处核验。{!configured && ' MinerU 尚未配置，可在下方配置 API。'}</p>
     </fieldset>}
-    <Button variant="outline" disabled={!file || busy || !!(file && validateFile(file)) || (mode === 'high-accuracy' && !vision && !!file && /\.pdf$/i.test(file.name))} onClick={() => void upload()}>{busy ? '正在处理…' : '上传资料'}</Button>
+    <Button variant="outline" disabled={!file || busy || !!(file && validateFile(file)) || (!!file && /\.pdf$/i.test(file.name) && (settings.status !== 'success' || (mode === 'high-accuracy' && !vision)))} onClick={() => void upload()}>{busy ? '正在处理…' : '上传资料'}</Button>
     {error && <Failure message={error} retry={() => retryAction.current?.()}/>}{notice && <p role="status">{notice}</p>}
     {settings.status === 'success' && <MinerUSettings sessionId={sessionId} initial={settings.data.config} onSaved={() => setConfigReload(n => n + 1)}/>}
     {settings.status === 'error' && <Failure message={settings.error} retry={() => setConfigReload(n => n + 1)}/>}

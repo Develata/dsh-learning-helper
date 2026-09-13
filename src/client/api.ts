@@ -12,7 +12,7 @@ export async function request<T>(path: string, signal: AbortSignal, body?: unkno
   const controller = new AbortController();
   const abort = () => controller.abort(signal.reason);
   signal.addEventListener('abort', abort, { once: true });
-  const timer = setTimeout(() => controller.abort(new DOMException('Request timed out', 'TimeoutError')), 12_000);
+  const timer = setTimeout(() => controller.abort(new DOMException('Request timed out', 'TimeoutError')), binary ? 45_000 : 12_000);
   try {
     signal.throwIfAborted();
     const response = await fetch(ROOT + path, { method: body === undefined ? 'GET' : 'POST',

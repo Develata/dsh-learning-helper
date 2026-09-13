@@ -31,3 +31,19 @@ test('in-flight browser request aborts on caller cancellation and the twelve-sec
   const expired = request('/sessions/session/project', new AbortController().signal); t.mock.timers.tick(12_000);
   await assert.rejects(expired, { name: 'Error', message: '网络请求未完成，请重试。' });
 });
+
+test('binary PDF upload has a forty-five-second deadline and still honors caller cancellation', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  let uploadSignal: AbortSignal | undefined;
+  t.mock.method(globalThis, 'fetch', (_: unknown, options: RequestInit) => new Promise((_resolve, reject) => {
+    uploadSignal = options.signal!;
+    uploadSignal.addEventListener('abort', () => reject(uploadSignal!.reason), { once: true });
+  }));
+  const pending = request('/sessions/session/sources/pdf', new AbortController().signal, new Blob(['pdf']), true);
+  const rejected = assert.rejects(pending, { message: '网络请求未完成，请重试。' });
+  t.mock.timers.tick(12_000); assert.equal(uploadSignal!.aborted, false);
+  t.mock.timers.tick(33_000); await rejected;
+  const caller = new AbortController();
+  const cancelled = request('/sessions/session/sources/pdf', caller.signal, new Blob(['pdf']), true);
+  caller.abort(); await assert.rejects(cancelled, { name: 'AbortError' });
+});

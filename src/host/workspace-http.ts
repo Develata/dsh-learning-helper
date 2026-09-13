@@ -55,7 +55,9 @@ export function workspaceHandler(projects: WorkspaceProjects, reject: (req: Inco
           respond(result.deduplicated ? 200 : 201, { ...result, source: p.assets.getSource(result.source.id) }); return;
         }
         if (req.method === 'POST' && resource === 'sources/pdf') {
-          const input = validate(z.strictObject({ filename: filenameSchema, mode: pdfModeSchema }), { filename: url.searchParams.get('filename'), mode: url.searchParams.get('mode') ?? 'auto' });
+          const input = validate(z.strictObject({ filename: filenameSchema, mode: pdfModeSchema }), {
+            filename: url.searchParams.get('filename'), mode: url.searchParams.get('mode') ?? readConfig(p.root).documentParsing.pdfMode,
+          });
           const bytes = await receivePdf(p.root, req, signal);
           const operation = p.pdf.import(input, bytes, { sessionId }, signal);
           // Admission is durable before the expensive parse. Host owns the bounded continuation.
