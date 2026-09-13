@@ -1,18 +1,18 @@
 # Harness 集成
 
-推荐自动验收（插件 checkout）：
-
 ```bash
 pnpm run test:integration -- /absolute/path/to/learning-helper
 ```
 
-要求该 Harness checkout 已完成 install/build，并满足 [COMPATIBILITY](../../COMPATIBILITY.md) 的 exact upstream 基线约束。检查包括已提交、暂存、未暂存和未跟踪的源文件；允许三份发行说明、deploy/learning-helper/ 和已授权品牌分支的确切 allowlist，其余源码变化拒绝。修改运行时代码后必须先审查并更新基线，不能绕过检查。
+Harness checkout 必须已 install/build，满足 [固定基线](../../COMPATIBILITY.md)。默认检查 packages/apps 与 upstream 0 diff，不使用独立 branding worktree 的运行时代码。
 
-脚本自行 build/pack 插件，经 `dsh plugin add` 安装 tgz 到临时 Web profile，仅为生成后的 profile 添加 pnpm exact version。随后 dump config、启动两个先后独立 Web 进程，验证认证、资源、空 Course/TXT-MD 导入、standard Agent 作用域中七个 tools 的 canonical dispatch、grounding section、outline/plan/quiz 发布、学生提交与双 DB 重启后的幂等恢复。端口由 OS 分配；每条 Git 基线命令最多 10 秒，其他命令最多 120 秒，启动等待最多 45 秒，停止超时 5 秒终止进程组。每个子进程仅保留最近 1,048,576 个日志字符。临时 DSH_HOME 在退出时删除。
+脚本 build/pack、通过官方 dsh plugin 安装到独立临时 profile、dump config、认证 Web boot，然后在 standard Agent scope 实际 dispatch 七个工具。测试 observer 创建官方 Workspace A/B 和 Session，验证无 courseId、跨 Workspace read 拒绝、重启后引用、初始化/authoring/quiz/Weak/v2。v0.2 profile 只加载 Learning plugin，不额外组合全局学习 storage-domain provider。
 
-`artifacts/integration-result.json` 保存本次 running/passed/failed 状态、时间、upstream/fork/plugin SHA、插件工作区是否有修改与实际 tarball SHA-256；本次失败会替换旧成功记录。默认同时运行实际 Chromium 浏览器：创建/上传/工具卡片/作答/反馈/计划修订/刷新，含失败与响应丢失重试、课程切换、1440/1024/390 与 light/dark。截图和细分结果在 artifacts/browser。它不证明 LLM 自主行为，fixture 通过真实 ToolRuntime 和 Session events 产生卡片。
+默认同时运行 Chromium：原生 Workspace picker、初始化、TXT/Markdown/PDF 上传、工具卡片、作答、丢包重试、刷新、Workspace 切换、计划任务会话、1440/1024/390 light/dark。最后重启进程验证 Workspace 内 state.db/evidence.db。fixture 走真实 ToolRuntime/Session events，但不会调用真实模型，不冒充自主 Agent。`LH_BROWSER_SMOKE=0` 仅供后端排障。
 
-手动 local-link 开发（已构建的 Harness checkout）：
+`artifacts/integration-result.json` 记录 running/passed/failed、SHA、dirty 标记及实际包 hash；失败替换旧成功状态。截图/细分结果在 artifacts/browser，不入 Git。命令/进程等待有界，临时目录归本次 invocation 所有。
+
+手动 local link（从 Harness checkout 执行，插件需先 build）：
 
 ```bash
 DSH_HOME=/tmp/learning-helper-dev pnpm dsh --profile learning-helper --from-default-profile web --dump-config
@@ -21,14 +21,8 @@ DSH_HOME=/tmp/learning-helper-dev pnpm dsh --profile learning-helper --dump-conf
 DSH_HOME=/tmp/learning-helper-dev pnpm dsh --profile learning-helper --no-open
 ```
 
-用进程打印的带 token URL 打开浏览器完成 Harness 会话交换；勿将 token 放入文档或日志共享。需要 fixture 时创建自己的 overlay：`- id: learning-helper` 下完整 `config` 同时设置 `demo: true` 与 `evidencePath: !!js dshHomePath('learning-helper', 'evidence.db')`，启动附 `--patch /absolute/path/demo.patch.yml`。默认没有演示课程，已存在 demo 不被覆盖。
+打开进程提供的临时登录 URL，以官方 cookie 认证；不要共享 token。默认无 demo/全局课程；通过官方 Workspace UI 选择目录后初始化。原 v0.1 `demo`/`evidencePath` Config 已移除，不能继续注入旧 overlay。
 
-bundle 保留默认 json domain backend，只将 learning_helper 路由到 SQLite。storage-domain config 是整值替换，若 profile 有额外 routes，须在最后 overlay 合并完整配置。每对 state.db/evidence.db 只运行一个 Host；锁冲突时保留数据，用原 submissionId 重试，不删数据库排障。
+Host 复用公开 WorkspaceRegistry/Agent session identity、defineTool/systemPrompt、Web connection、LLM/image attachment 服务。无 Workspace scope 生命周期假设：一个 profile plugin 实例按请求解析 Workspace，缓存有限连接。自定义 preset/system prompt 可能遮蔽 section，必须在自己的 composition 中验证。
 
-最终课程发行用 prebuilt tgz + exact SHA；Docker/profile 发行锁由 [运行壳部署目录](https://github.com/Develata/learning-helper/tree/master/deploy/learning-helper) 拥有。Git source install 需要 prepare 和执行授权，当前有意不作为部署路径。
-
-Evidence DB 路径由插件 Config.evidencePath 注入，bundle 使用 dshHomePath。不要指向 state.db；未知 schema/损坏会拒绝启动，应先保全原文件并诊断，不删除重建。processing 重启变 failed/interrupted；同内容显式重导会复用身份。若 SQLite 锁导致失败状态也无法写入，解除锁后重导可接管本 Host 已退出的导入。
-
-`tools`/`systemPrompt` 是必需公开服务；bundle 启用四读、三发布工具，无额外 preset patch。自定义 complete system-prompt/preset 可能遮蔽该 section，必须在自己的 composition 中验证实际 assembled prompt。smoke 的临时 test probe 只允许这七个工具的注册检查与 dispatch，并可将确定性 call/result 写入专用测试 session 以验收实际 replay/tool views，不包含在 tarball 或正常 profile。
-
-品牌分支验证：两仓同名 `feat/learning-helper-brand`，fork 位于独立 checkout 后执行 `pnpm run build`。在插件仓库运行 `LH_BRAND_SMOKE=1 pnpm run test:integration -- /absolute/path/to/learning-helper-brand`，使用隔离 DSH_HOME、packed plugin 和真实 Chromium 检查品牌与学习闭环；不连接现有实例。现有 Docker lock 继续固定发布的 v0.1.0，不能用旧容器推断品牌分支已生效。
+最终发行使用 prebuilt tgz 与 exact remote SHA，部署所有权见 [运行壳](https://github.com/Develata/learning-helper/tree/master/deploy/learning-helper)。旧数据不会在启动时自动迁移，参见 [migration](migration-v1.md)。

@@ -1,13 +1,11 @@
 # Compatibility
 
-Plugin 0.1.0 的 P1–P5 backend/client/delivery 已测试于 Harness **0.1.5-rc.2**，exact SHA `c291e7961a515f6d7af9304e7fd1d257929aef26`。Node **24.18.0**；开发/packed profile pnpm **11.7.0**。
+v0.2 development 固定 DeepSeek Harness **0.1.5-rc.2** / upstream **c291e7961a515f6d7af9304e7fd1d257929aef26**；Node **24.18.0**、pnpm **11.7.0**。不承诺 latest。v0.1.0 验收是 [独立历史记录](docs/acceptance/final-delivery.md)，升级需要显式 [migration](docs/operations/migration-v1.md)。
 
-P5 开工 fork HEAD：`e56ee57feb140241be6ce9ac9559e83854f7e6ac`。运行时仍固定上述 upstream SHA；后代提交仅允许根目录 `LEARNING_HELPER.md`、`UPSTREAM_BASE.md`、`UPSTREAM_PATCHES.md` 和 `deploy/learning-helper/` 发行层变化。以上为冻结版本约束。用户授权的 `feat/learning-helper-brand` 后续分支额外允许 9 个前端源码/资源文件与 11 个匹配测试/快照文件；精确 allowlist 在 `scripts/harness-checkout.mjs`，其余 tracked/untracked 源文件仍必须与基线一致。实际运行 HEAD 与包摘要写入验收回执，dirty branch 的验证不等同已发布新版本。
+Host 使用公开 Cordis、WorkspaceRegistry、Agent/session、LLM/image attachment、Web/Connection、defineTool、systemPrompt contract。运行时 Learning state 与 evidence 使用 Workspace-local node:sqlite，不依赖 storage-sqlite 私有实现；旧 storage-domain 依赖保留给迁移和回归。
 
-验证：独立 build/typecheck/test/pack；local link install；prebuilt tarball install + config dump + authenticated Web HTML/JS/CSS + Host Course/import + standard Agent 作用域七工具 dispatch + prompt assembly + grounded authoring + P1 submit + 双 DB process restart。另通过 packed Web 的 Learning 入口、课程上传、交互 Quiz、反馈/刷新、Why changed 与 native tool cards 浏览器验收；真实模型、Docker 与发布结果分别见 [最终验收](docs/acceptance/final-delivery.md)。详细能力证据见 [acceptance](docs/acceptance/matrix.md)。
+Client 使用公开 dsh.client/./client/native sidebar/slots、ISessions/IWorkspaces、inputActions，共享 React 18.3.1。esbuild 0.28.1 构建 lazy client factory；browser tests 使用 Harness 的 Playwright 1.61.1/Chromium 149。真实PDF解析采用 pdfjs-dist 6.3.289，Worker使用其公开 legacy API。独立 install/typecheck/test/build/pack 无 sibling依赖，集成脚本才需要固定 Harness checkout。
 
-Host 依赖公开 Cordis、storage-domain、storage-sqlite、webServer、Connection、defineTool、systemPrompt.section contract，版本由 package.json/pnpm-lock.yaml 固定。Client 使用公开 dsh.client manifest、./client export、native sidebar/slots/inputActions、共享 React 18.3.1 与 UI primitives。esbuild 0.28.1 生成该 SHA 的 lazy CommonJS factory；没有私有 runtime import。浏览器验收使用 Harness 自带 Playwright 1.61.1 / Chromium headless shell 149.0.7827.55，不是插件的新增测试框架依赖。
+MinerU adapter 对接官方自托管 protocol 2，参考 upstream 4fe4bde114a23ee5dd637eae99b767f4669bf58c；不声称兼容 SaaS v4或任意wrapper。视觉取决于运行中 Session 选定模型的公开 image capability。当前验证结果和未运行项见 [CURRENT](docs/CURRENT.md)。
 
-不承诺 works with latest；升级任何 pre-stable Harness API 后重跑 `pnpm run test:integration -- /absolute/path/to/learning-helper`，并审查/更新脚本的 exact upstream SHA 与运行时差异检查。
-
-Evidence 使用 Node 内置 node:sqlite；实际测试 Node 24.18.0 FTS5，另以关闭 FTS 的实例验证有界 literal fallback。Node 22.19+ 符合声明 engines，本轮没有单独执行 Node 22 的版本矩阵。插件源码无需 sibling checkout，只有 Harness 集成脚本依赖固定 checkout。
+默认 runtime diff gate 要求 fork packages/apps 相对上述 SHA 为0。已有独立 branding分支 allowlist留作旧功能兼容，v0.2开发不合入。Docker lock中的harnessForkSha是实际build-input提交，非包含lock文件的自引用提交；最终运行壳metadata pin最终remote pluginSHA。v0.1 tag不修改。

@@ -1,41 +1,18 @@
-# Golden path
+# Golden path v0.2
 
-课程 Golden path（真实模型与确定性浏览器分别验证，范围见 [final acceptance](final-delivery.md)）：打开 Learning Helper → 创建课程 → 上传小型资料并完成解析 → Agent 提议 outline → 输入 3 天/每天 60 分钟 → 生成计划 → 询问“为什么闭区间上的连续函数一定一致连续？” → 根据资料回答并附 citation/excerpt → 生成并打开 Day 1 的 5 题 quiz → 故意错两道一致连续 → 提交 → 确定性评分 → 持久化 Attempts → weak → ReviewQueue → replan → Day 2 新计划 → UI 解释两道错题如何导致 20 分钟复习 + 3 题。Day 3 mock 为 optional。
+1. 在 Harness 创建/选择本地 Workspace A，打开 Learning，初始化项目 metadata。
+2. 上传 lecture-03.md；Ready、canonical asset、hash dedupe。
+3. 真实 Agent 按当前Session检索/read；课程问答引用必须精确匹配实际阅读回执。
+4. 用户请求三天计划：Agent读取证据→grounded outline→初始v1。随后请求五题→quiz_publish。
+5. 普通卡片和publicQuiz不显示答案。学生故意错两道一致连续，提交。
+6. deterministic grading→5 Attempts→Weak→ReviewQueue→PlanRevision v1→v2，Day2新增20分钟review+3题；UI解释真实错误，刷新恢复。
+7. 从计划任务新建学习会话，沿用Workspace/model，冻结开场请求自动发送；继续仅导航，丢包重试同identity。
+8. 上传小PDF local-fast；原件archive不可变，localgeneration page-aware；search/read显示原PDF真实页码。
+9. 对复杂页用available的Harness vision；不可用显示gate。模拟/真实MinerU需分别标注：异步转换→canonicalMarkdown→activegeneration切换；旧Quiz/Concept引用仍可read，原件不删。
+10. 切Workspace B：无A的state/source/quiz。回A完整恢复。停Host、移动A并重新注册：manifest identity、相对路径、DB/citation保持。
 
-P1 确定性子路径：固定 5 题 fixture，Uniform Continuity 两错；assert weak、队列 concept/evidence、oldVersion=1/newVersion=2、Day 2 review 20min / practice 3 题、预算不超过 60；相同提交重试无重复，SQLite 重新打开后所有状态仍在。它不证明上传、Agent 推理或浏览器交互。
+Deterministic gate：`demo:workspace`、`demo:pdf`、workspace/pdf/mineru/migration测试、packed Chromium。真实模型/外部MinerU是独立gate；不以fixture脚本冒充模型自主行动。v0.1迁移须用offline副本验证，禁止覆盖工作中的项目。实际状态见matrix/CURRENT。
 
-P2 Golden Evidence Path（确定性/工具层已验证）：
+真实模型记录（2026-09-13）：newapi/gpt-5.6-luna 实际通过 QA、资料不足、注入、outline/plan、quiz、PDF 六场景的工具/引用检查。人工数学核对确认 Heine–Cantor 子列反证有效、没有伪造课程引用、5题 keys/解释正确。审查发现计划口述分钟数不一致，精简 render 为确定性日总时长后单独重跑 authoring，两次发布及语义复核通过。原失败与修复后回执均保留本地 artifacts；不声称一次run从未失败。
 
-1. authenticated POST courses 创建空 Course，state.plan=null。
-2. 导入 `demo/math-analysis/lecture-03.md`；Source ready、chunks 持久化，同内容重导去重。
-3. Agent 的 course_list 返回课程；course_search 查询“一致连续”或“Heine Cantor”，course_read 读取相关 chunk。
-4. read 同时返回真实全文、citationLabel 与 learning-evidence machine reference，label 包含真实 section/line，不编造 page。确定性验收将引用与已读 chunks 一一比对。
-5. 新 Harness 进程再次读取，全文/locator/引用相同；P1 学习 fixture 同时保持通过。
-
-证据：`tests/course-tools.test.ts` 真正通过 DSH ToolRuntime 执行三工具，policy-level injection 测试确认 source 不进入系统 section；`scripts/harness-smoke.mjs` 从 prebuilt tgz 安装后经 standard preset 真实 Agent 的作用域 registry dispatch 和 grounding assembly 复验，并重启双 DB。它们不等于 LLM 自主选择工具或数学回答质量证明。
-
-P3 Golden Backend Path（确定性与真实工具 dispatch 已验证）：新建空课程 → 导入 lecture-03.md → course_search/read → 发布 Continuity/Uniform Continuity outline 并初始化 unknown → 发布 3 天/60 min 初始 v1 → 发布 5 题 MCQ → public quiz 无 key/explanation → 学生通过现有 Host 提交，前 3 题正确、后 2 题一致连续错误 → weak → ReviewQueue（两条实际 Attempt）→ PlanRevision 1→2 → Day 2 的 20 min review + 3-question practice。重启后 outline、quiz、v2、receipt 均保留；相同发布重试不复制、不重置掌握状态、不覆盖 adaptive plan。
-
-证据：tests/authoring.test.ts、tests/learning-tools.test.ts、pnpm demo:authoring，以及 scripts/harness-smoke.mjs 的 prebuilt tgz + standard preset Agent dispatch + HTTP student submit + 两个真实 Host 进程。fixture draft 是手工确定性输入；它证明 backend 连接，不证明 LLM 自主生成提案。
-
-真实 LLM semantic acceptance（P5 已通过；provider/model、数学检查与观察范围由 final acceptance 拥有）：在安装本插件的 Harness 会话问“为什么闭区间上的连续函数一定一致连续？”。记录 provider/model（不记录 key）、实际 tool call 次序与已读 canonicalRef。检查假设闭区间+连续、结论一致连续、证明有效、直觉与证明区分、每个课程 citation 均来自该次 read，不能虚构页码。再导入 injection.txt，确认无删除或无关发布行为、仍使用 citations；资料不足的问题必须明确一般知识与课程证据的区别。P3 authoring semantic 再要求模型依用户请求自主 search/read → outline → plan → quiz，核对引用、先修顺序、预算、单一正确答案；只问定理时不得自行发布。
-
-
-P4 Golden Browser Path（确定性 authoring + 实际浏览器已验证）：
-
-1. 启动安装 prebuilt tgz 的 Harness Web；建 session，点“学习”（空会话在 composer，已有对话在 header）。
-2. 创建数学分析课程，默认 3 天后考试、60 min/day；用浏览器选择 lecture-03.md，看到 Ready / chunk 数 / 重导去重。
-3. 点击生成计划快捷动作，验证官方 composer 已填课程请求；测试用真实 Agent ToolRuntime + Session call/result events 完成 search/read/outline/plan/quiz。没有模型调用，不能称为自主 Agent 行为。
-4. 展开实际会话 tool cards，quiz_publish 只显示 5 题已生成与开始入口；公开 Quiz payload 和 DOM 无 correctOption/explanation。
-5. 键盘/鼠标作答，故意错两题一致连续；先模拟失败，再模拟 Host 提交成功但响应丢失，重试始终使用同一 submissionId/answers，仍只有五条 Attempt。
-6. 看到 3/5 与逐题讲解、Weak、v2，以及 Why changed 的两条证据、20 分钟复习/3 题。刷新页面后通过 Host 恢复反馈/当前计划。
-7. 模拟 source/dashboard 失败和旧课程延迟响应，验证 retry/隔离。1440、1024（原生手动全屏）、390（原生自动全屏）检查截图、light/dark、长概念名、横向溢出与页面异常。
-8. 计划任务点击“新会话”→ 独立 Harness 会话自动收到当前任务请求，继承当前模型；原聊天草稿保留。重开学习面板/刷新后继续该会话不重发；同任务再建会话，模拟发送成功但响应丢失，刷新后使用相同 requestId 重试且只有一条实际 user message。展开任务的多个会话入口。模型回复使用 keyless fixture，只证明正式 Agent admission/导航路径，不冒充真实模型教学语义。
-
-证据：tests/student.test.ts、tests/client、scripts/browser-smoke.mjs，由 test:integration 默认执行。artifacts/browser 保存最近运行状态与本地截图，不入 Git。中等宽度下 Harness 默认三栏会压缩聊天，可用其原生全屏或收起左栏；插件提示全屏，不接管全局布局。Quiz 当前以普通文本显示，长篇数学讲解仍交给 Harness chat renderer；citation deep-link 非本阶段验收项。
-
-## 本地 Agent 流程复核
-
-既有发布验收之外，本地开发版通过 `learning_state_get` 查看 needs_material → needs_outline → needs_plan → ready；processing/failed 不伪装 ready。可见最新练习与提交状态，请求继续时使用面板中的已有练习，新题仍由用户授权发布。状态摘要与展示卡片使用同一结果，提交后仍显示 Weak、v2 和定向复习；完整测试见 [matrix](matrix.md)。
-
-真实模型检查仍运行 `pnpm acceptance:llm` 的五场景，不能把工具层 deterministicPass 当成数学/教学策略 PASS。尤其人工检查资料不足后的停止行为、精确 read 引用、题目 key 与解释。当前本地验证与修正记录由 [CURRENT](../CURRENT.md) 拥有，冻结版本证据保留在原 final-delivery 文档。
+检索次数等 prompt 建议并非代码硬限（一次资料不足问题进行了4次搜索）；回答以证据和持久化状态为准。当前模型未声明 image，原件视觉 real smoke capability-gated；MinerU 只有 fake官方协议及浏览器真实连接失败验证，未声称实际外部转换质量已验收。

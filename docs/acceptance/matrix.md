@@ -1,43 +1,29 @@
 # 验收矩阵
 
-执行环境与命令日期由 [CURRENT](../CURRENT.md) 记录；下面只保存能力与证据关联。
+状态基于实际执行，不继承旧版本的发布结论。v0.1.0 完整验收固定见 [final-delivery](final-delivery.md)；下列为 v0.2 工作状态，最终命令/模型/远端状态由 [CURRENT](../CURRENT.md) 记录。
 
-| Capability | Status | Proof / Test | Demo step |
-|---|---|---|---|
-| CodeGraph 双仓初始化 | verified | 1.6.0 init/status，插件实现后 sync | Agent 导航 |
-| 发布的 v0.1.0 Harness patch = 0 | verified | 冻结版本的 packages/apps 无变更；后续品牌分支差异见 [audit](../architecture/integrations.md) | 安装 |
-| Learning Helper 品牌（本地分支） | verified | LH_BRAND_SMOKE=1 packed Chromium：title/welcome/manifest/favicon、三个 brand slots、收起/展开、1440 light/dark、1024、390；原生学习闭环继续通过。未部署到现有容器 | 打开 |
-| Bundle 独立 install/typecheck/build/pack | verified | 独立临时副本中 install/typecheck/test/build/pack；运行与测试数见 CURRENT，tgz 含 dist/manifest/docs | 打开 |
-| Fixture 5 题确定性 adaptation | verified | `tests/learning.test.ts`：两错→weak→review→v2；预算与旧计划保留 | 提交→Day 2 |
-| 幂等/并发/故障/恢复 | verified | 相同提交不再写；不同 quiz 并发无丢失；SQLite lock 整体失败；新 Node 进程恢复 | 反馈持久化 |
-| 派生状态与复习证据一致性 | verified | `tests/learning.test.ts`：拒绝无证据的 mastery/status；SQLite 重启拒绝篡改的状态、重复错误和答对记录的修订引用，不重置数据 | 学习状态 |
-| 合法输入的重规划边界 | verified | `tests/adaptation-boundaries.test.ts`：长概念名、任务 ID 碰撞、完成任务/待办任务达上限时仍正确提交 | 提交→Day 2 |
-| Host API 输入与答案隔离 | verified | `tests/http.test.ts`：无 key 投影、拒绝错误输入、body size/time bound、Harness 拒绝回执 | Quiz Host |
-| 真实 Harness local link / tarball / Web boot | verified | local `dsh plugin add` 与 `scripts/harness-smoke.mjs`；会话校验、静态资源、新进程复用 receipt | 运行壳 |
-| Harness 固定基线检查 | verified | `tests/harness-checkout.test.mjs`：CLI 参数、发行说明后代提交、拒绝 committed/staged/unstaged/untracked runtime drift | 安装 |
-| 空 Course lifecycle | verified | tests/course-lifecycle.test.ts：空集合/plan=null、无 plan 拒绝 practice；P1 完整 fixture 仍合法 | 创建 |
-| TXT/MD 导入、hash 去重与容量 | verified | tests/evidence.test.ts / evidence-http.test.ts：normalize/dedupe、独立 body bound、Source/Chunk/corpus 上限 | 上传 |
-| Evidence 隔离与稳定引用 | verified | 英中/LaTeX search、read 顺序/总量/wrong-course、locator/hash 校验、Markdown 标签与 Unicode 边界回归 | 检索/引用 |
-| Evidence 原子写与恢复 | verified | SQLite trigger/lock 失败无部分 chunks；显式 retry；stale processing、损坏/版本拒绝；新 Node/Harness 进程回读一致 | 重启 |
-| 三个真实 DSH 只读 tools | verified | tests/course-tools.test.ts；packed profile 中 standard Agent-scoped dispatch + canonical output + grounding assembly | Agent retrieval |
-| Grounded QA 的工具与引用路径 | verified | course_search → course_read → citation 逐一映射；instruction-like fixture 保持不可信数据，学习 DB 不变 | 证据问答基础 |
-| 真实 LLM 数学/抗注入/authoring 语义 | verified | 官方 Harness + newapi/gpt-5.6-luna；五场景真实工具轨迹、精确引用、全部作者引用已读、逐题/证明复核；[final acceptance](final-delivery.md) | LLM 回答与生成 |
-| PDF / MinerU / OpenFile | deferred | TXT/MD 已足够闭环；OpenFile strict-peer probe 不通过，P4 未改变此结论 | 后续导入 |
-| Grounded outline / DAG / unknown 初始化 | verified | tests/authoring.test.ts：合法发布、循环/未知先修/跨课/无证据拒绝、语义重试/并发单赢家 | 概念提案 |
-| 初始 StudyPlan | verified | 1..14 天、预算/任务上限、pending/v1 派生；不同重发冲突，v2 后重试仍返回原 v1 | 计划提案 |
-| Grounded quiz / key 隔离 | verified | 5 题真实来源、concept/evidence/key/重复 prompt/options 校验；同内容/满容量 retry；public result/API 无 key | Quiz 提案 |
-| 七个正式 Agent tools | verified | tests/learning-tools.test.ts：真实 DSL/canonical output、四读三写、signal、拒绝内部 mutation；单 grounding section | Agent authoring |
-| Agent 准备状态 / 有界练习摘要（本地开发版） | verified | tests/authoring.test.ts：空/processing/failed/ready/archived、同课隔离、单 snapshot、最新 10 条与总计数、已交状态；学习/证据均不被读取操作修改 | 决定下一学习动作 |
-| 模型上下文精简（本地开发版） | verified | tests/learning-tools.test.ts：完整 canonical 不变、render 不含 mastery/近期序列/重复 refs/Attempt IDs，仍展示 Weak/v2/20分钟/3题；实际 card 回放。Demo fixture 3514→2914 UTF-8 bytes；不是耗时或 token 百分比 | Agent → 学生卡片 |
-| Agent 流程语义复核（本地开发版） | verified | 真实 Harness newapi/gpt-5.6-luna：QA/不足/注入与 opaque-ID 修正后的 plan/quiz 分批复核；引用、停止课程外证明、先修/预算、逐题 key 检查通过。不是一次新的全套 release acceptance；调用预算提示的偏差见 CURRENT | 真实学习流程 |
-| P1+P2+P3 backend 闭环 | verified | demo:authoring、packed Harness Agent 发布 + HTTP submit + 新进程恢复/重试；weak/review/v2/20min/3题 | backend 全程 |
-| Authoring 失败与边界 | verified | SQLite 锁无部分写、真实队列中取消、100 distinct chunks/单 Concept 八大片段/200 quizzes 等边界 | retry/recovery |
-| Student read models | verified | tests/student.test.ts：dashboard/quiz listing/result、未提交 key 隔离、已提交反馈、authenticated/wrong-course | Web 数据 |
-| 原生 Learning client / 课程设置 | verified | scripts/browser-smoke.mjs：packed client discovery、header/空会话入口、选课/创建/文件选择/Ready/dedupe；composer 预填 | 开始学习 |
-| 交互 Quiz / 反馈 / 刷新 | verified | 实际 Chromium 选项点击与键盘、3/5 反馈、响应丢失后相同提交身份与 receipt、刷新恢复 | 学生作答 |
-| Progress / Plan / Why changed | verified | 浏览器两错→Weak→v2，显示两条真实错误证据与 Day 2 的 20 分钟/3 题 | 核心演示画面 |
-| 普通 UI 答案隔离 / replay | verified | public payload、DOM、真实 quiz_publish card 的 correctOption=2/秘密 explanation 不泄漏；tests/client 覆盖 pending/error/坏结果；原始 session/export 不在边界内 | 提交前 |
-| Client 失败与取消 | verified | 创建明确拒绝后可编辑；source/dashboard/submit 失败可重试；旧课程延迟响应不污染新课程；12 秒 timeout/abort model tests | 恢复 |
-| 视觉与响应式 | verified | 1440/1024/390 截图人工自审、light/dark、长中英文知识点无横向溢出；1024 使用原生全屏，390 自动全屏 | 学生体验 |
-| pinned Docker delivery | verified | 固定 SHA/image digest；无缓存 build、新 volume、Chromium、restart/auth/Origin；最终 pin 见 fork 发行记录 | cold boot |
-| 计划任务独立会话（本地开发版） | verified | tests/client/task-session*.test.ts；packed Chromium：模型/workspace 继承、自动发送、原草稿保留、同任务多会话、刷新继续不重发、真实 Host 已接收但响应丢失后同 requestId 重试 | 从计划开始学习 |
+| Capability | Status | Proof |
+|---|---|---|
+| Workspace manifest / empty setup / one project | verified | workspace.test / workspace-recovery：双初始化幂等、A/B identity |
+| official Session scope / 7 tools / no courseId | verified | workspace-tools；packed standard Agent与公开registry；无globalCourse入口 |
+| Workspace-local state / old learner invariants | verified | workspace/learning/adaptation-boundaries/student/authoring；同一学习算法及回放校验 |
+| A/B isolation / moved workspace | verified | workspace、workspace-recovery、packed Chromium A/B切换及还原 |
+| TXT/Markdown assets / 200 sources | verified | generations；200接受/201拒绝；中英文/FTS/有界短词fallback |
+| PDF.js archive / pages / locators / dedupe | verified | pdf、pdf-pipeline；实际PDF.js与Chromium binary upload |
+| auto/high-accuracy mode / cache / failure | verified | fake vision 测试；实际模型能力为独立 gate |
+| original page tool bounds | verified | pdf-pipeline：非PDF/未知source/错误页/超4页拒绝；workspace tools作用域 |
+| separate parsing/assetization state | verified | pdf-pipeline：local可用时仍标解析中；MinerU不能与未结束视觉解析竞争，取消保留local |
+| MinerU official protocol2 adapter | verified | fake HTTP：health、task、poll、result、lost/failed/timeout、未知提交不自动重发 |
+| atomic generation / old citation / quotas | verified | generations、MinerU：active-only search / historical read；失败派生预留与第11次拒绝 |
+| explicit v1 migration / original untouched | verified | migration：完整已评分fixture、概念/计划/练习/citations相同、重复幂等、原库hash不变 |
+| native student UI / quiz / Weak→v2 | verified | packed Chromium：初始化/上传/工具卡片/键盘作答/丢包重试/刷新/错误恢复 |
+| safe cards / pre-submit keys absent | verified | student/client + Chromium public payload/DOM/quiz_publish card |
+| task sessions / draft / retry | verified | client task tests + packed Chromium：继承Workspace/model、自动发送、原草稿、继续不重发 |
+| long Chinese / final visual / soft-warning UI | verified | Chromium 1440/1024/390 light/dark截图；100条source投影；checkbox尺寸断言与PDF错误状态 |
+| actual Harness LLM workspace QA / PDF | verified | newapi/gpt-5.6-luna实际search/read和准确citation；最终全场景复核仍在进行 |
+| actual Harness outline/plan/quiz v0.2 | verified | newapi/gpt-5.6-luna：真实publish；六场景程序检查加authoring回执修复后语义复核 |
+| actual multimodal / real MinerU | blocked | 当前 newapi/gpt-5.6-luna 的公开 inputModalities 未声明 image；未配置官方 MinerU 服务 |
+| standalone / final full regression | verified | 无sibling的新副本 frozen install/typecheck/145 tests/build/pack；本地5个demo和packed restart |
+| v0.2 Docker cold boot/restart | planned | 仍需新的exact plugin SHA与独立volume验证；不替换用户v0.1实例 |
+| no Harness runtime patch | verified | upstream c291e796 对 packages/apps 0 diff |
+| vector/PKM/FSRS/multi-user/source deletion | deferred | 不在本轮范围 |
