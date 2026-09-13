@@ -1,10 +1,14 @@
+import { mkdir } from 'node:fs/promises';
+import { join } from 'node:path';
+import z from '@deepseek-ai/schemastery';
 import { randomUUID } from 'node:crypto';
 import { LlmAdapter, createUserMessage, createAssistantMessage, createToolResultMessage } from '@deepseek-ai/dsh-llm';
 
 // Integration-only Host observer. Never shipped in the npm package or normal profile.
 export const name = 'learning-helper-test-probe';
-export const inject = ['tools', 'systemPrompt', 'webServer', 'connection', 'agents', 'agentPresets', 'sessions', 'llm', 'sessionController'];
-export function apply(ctx) {
+export const inject = ['tools', 'systemPrompt', 'webServer', 'connection', 'agents', 'agentPresets', 'sessions', 'llm', 'sessionController', 'workspaceRegistry', 'sessionPersistence'];
+export const Config = z.object({ workspace: z.string().required() });
+export function apply(ctx, config) {
   const modelCalls = [];
   class TaskFixtureAdapter extends LlmAdapter {
     async resolveModel(provider, model) { return { provider, id: model, name: model }; }
@@ -18,22 +22,31 @@ export function apply(ctx) {
     }
   }
   let fixtureRegistered = false;
-  const learningNames = ['course_list', 'course_search', 'course_read', 'learning_state_get', 'course_outline_publish', 'study_plan_publish', 'quiz_publish'];
-  let handlePromise;
-  const turns = new Map();
-  const getAgent = async () => {
-    handlePromise ??= ctx.agents.create({ sessionId: `evidence-probe-${randomUUID()}`,
-      meta: { cwd: process.cwd(), agentPreset: 'standard' },
-      setup: async agentCtx => { await ctx.agentPresets.mount(agentCtx, 'standard'); } });
-    return (await handlePromise).agent;
+  const learningNames = ['course_original_read', 'course_search', 'course_read', 'learning_state_get', 'course_outline_publish', 'study_plan_publish', 'quiz_publish'];
+  const handles = new Map(); const turns = new Map();
+  const getAgent = async (key = 'a') => {
+    if (!['a', 'b'].includes(key)) throw new Error('Invalid fixture scope');
+    if (!handles.has(key)) handles.set(key, (async () => {
+      const path = join(config.workspace, 'probe-' + key); await mkdir(path, { recursive: true });
+      const workspace = await ctx.workspaceRegistry.resolveByPath(path) ?? await ctx.workspaceRegistry.create(path);
+      const sessionId = 'workspace-probe-' + key;
+      const setup = async agentCtx => { await ctx.agentPresets.mount(agentCtx, 'standard'); };
+      const handle = workspace.sessionIds.includes(sessionId)
+        ? await ctx.agents.resume({ resumeSessionId: sessionId, setup })
+        : await ctx.agents.create({ sessionId, meta: { cwd: path, agentPreset: 'standard' }, setup });
+      await ctx.sessions.flush(handle.agent.session); await workspace.attachSession(handle.agent.session.id);
+      return handle;
+    })());
+    return (await handles.get(key)).agent;
   };
-  ctx.effect(() => async () => { if (handlePromise) await (await handlePromise).dispose(); });
+  ctx.effect(() => async () => { for (const handle of handles.values()) await (await handle).dispose(); });
   ctx.effect(() => ctx.webServer.register({ kind: 'exact', path: '/learning-helper-test/tools', handler: async (req, res) => {
     const send = (status, value) => { res.writeHead(status, { 'content-type': 'application/json', 'cache-control': 'no-store' }); res.end(JSON.stringify(value)); };
     const rejection = ctx.connection.requestRejection(req);
     if (rejection !== undefined) { req.resume(); send(rejection, {}); return; }
     const signal = AbortSignal.timeout(5000);
     if (req.method === 'GET') {
+      await getAgent('b');
       const prompt = await ctx.systemPrompt.assemble({ scope: await getAgent() });
       send(200, { sessions: ctx.agents.list().map(a => ({ id: a.session.id, cwd: a.session.header.cwd,
         taskPrompts: a.session.snapshotEvents().filter(e => e.type === 'user/message').map(e => e.data.content)
@@ -47,6 +60,9 @@ export function apply(ctx) {
       const chunks = []; let bytes = 0;
       for await (const chunk of req) { bytes += chunk.length; if (bytes > 16_384) throw new Error('oversize probe input'); chunks.push(chunk); }
       const input = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+      if (input.action === 'rename-task-source' && typeof input.sessionId === 'string') {
+        send(200, await ctx.sessionController.rename({ sessionId: input.sessionId, title: '任务学习入口 · 保留草稿' })); return;
+      }
       if (input.action === 'select-task-fixture' && typeof input.sessionId === 'string') {
         if (!fixtureRegistered) { ctx.llm.registerAdapter(['learning-task-fixture'], new TaskFixtureAdapter()); fixtureRegistered = true; }
         const selected = await ctx.sessionController.selectModel({ sessionId: input.sessionId, provider: 'learning-task-fixture', model: 'task-smoke' });

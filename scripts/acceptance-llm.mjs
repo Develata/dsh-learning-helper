@@ -10,9 +10,9 @@ import { resolveHarnessPath, verifyHarnessCheckout } from './harness-checkout.mj
 
 const plugin = resolve(import.meta.dirname, '..');
 const harness = resolveHarnessPath(process.argv.slice(2), join(plugin, '..', 'learning-helper'));
-const allScenarios = ['qa', 'insufficient', 'injection', 'plan', 'quiz'];
+const allScenarios = ['qa', 'insufficient', 'injection', 'plan', 'quiz', 'pdf'];
 const scenarios = process.env.LH_LLM_SCENARIOS?.split(',') ?? allScenarios;
-assert.ok(scenarios.length && new Set(scenarios).size === scenarios.length && scenarios.every(s => allScenarios.includes(s)), 'Invalid scenario selection');
+assert.ok(scenarios.length && new Set(scenarios).size === scenarios.length && scenarios.every(s => [...allScenarios, 'original'].includes(s)), 'Invalid scenario selection');
 const userHome = process.env.DSH_HOME ?? join(homedir(), '.dsh');
 const work = await mkdtemp(join(tmpdir(), 'learning-helper-llm-'));
 const env = { ...process.env, DSH_HOME: join(work, 'home') };
@@ -53,7 +53,7 @@ try {
   result.pluginSha = (await run(['git', 'rev-parse', 'HEAD'], plugin)).trim();
   result.pluginTreeDirty = Boolean((await run(['git', 'status', '--porcelain'], plugin)).trim());
   await run(['pnpm', 'run', 'build'], plugin); await run(['pnpm', 'pack', '--pack-destination', 'artifacts'], plugin);
-  const tarball = join(plugin, 'artifacts/dsh-learning-helper-0.1.0.tgz');
+  const tarball = join(plugin, 'artifacts', `dsh-learning-helper-${JSON.parse(await readFile(join(plugin, 'package.json'), 'utf8')).version}.tgz`);
   result.tarballSha256 = createHash('sha256').update(await readFile(tarball)).digest('hex');
   await run(['pnpm', 'dsh', '--profile', 'learning-helper', '--from-default-profile', 'web', '--dump-config']);
   const profilePath = join(env.DSH_HOME, 'profiles/learning-helper/package.json');
@@ -77,27 +77,42 @@ try {
   async function request(path, body, ms = 10_000) {
     const r = await fetch(base + path, { method: body ? 'POST' : 'GET', headers: { cookie, origin: base, 'content-type': 'application/json' },
       ...(body ? { body: JSON.stringify(body) } : {}), signal: AbortSignal.timeout(ms) });
-    assert.ok(r.ok, `Acceptance Host status ${r.status}`); return r.json();
+    assert.ok(r.ok, `Acceptance ${path} Host status ${r.status}: ${scrub(await r.clone().text()).slice(0, 800)}`); return r.json();
   }
   const roster = await request('/learning-helper-acceptance/run');
   result.provider = roster.selection.provider; result.model = roster.selection.model;
   assert.ok(roster.providers.includes(result.provider), 'Selected provider is not registered');
   console.log(`Actual Harness Agent: ${result.provider}/${result.model}`);
-  for (const [id, filename] of [['llm-course', 'lecture-03.md'], ['llm-injection', 'injection.txt']]) {
-    await request('/learning-helper/v1/courses', { id, title: id === 'llm-course' ? '数学分析验收课程' : '注入防御验收课程', subject: '数学分析', dailyMinutes: 60 });
-    await request(`/learning-helper/v1/courses/${id}/sources/text`, { filename, mimeType: filename.endsWith('.md') ? 'text/markdown' : 'text/plain', text: await readFile(join(plugin, 'demo/math-analysis', filename), 'utf8') });
+  for (const [key, filename] of [['main', 'lecture-03.md'], ['injection', 'injection.txt']]) {
+    const id = roster.sessions[key];
+    await request(`/learning-helper/v2/sessions/${id}/project`, { title: key === 'main' ? '数学分析验收项目' : '注入防御验收项目', subject: '数学分析', dailyMinutes: 60 });
+    await request(`/learning-helper/v2/sessions/${id}/sources/text`, { filename, mimeType: filename.endsWith('.md') ? 'text/markdown' : 'text/plain', text: await readFile(join(plugin, 'demo/math-analysis', filename), 'utf8') });
   }
+  const { makePdf } = await import('../tests/pdf-fixture.ts');
+  const pdf = makePdf([{ text: 'PDF statement: Heine-Cantor theorem. A continuous real function on a closed bounded interval is uniformly continuous.' }]);
+  const upload = await fetch(`${base}/learning-helper/v2/sessions/${roster.sessions.main}/sources/pdf?filename=page-acceptance.pdf&mode=local-fast`, { method: 'POST', headers: { cookie, origin: base, 'content-type': 'application/pdf' }, body: pdf, signal: AbortSignal.timeout(30_000) });
+  assert.equal(upload.status, 202);
+  const sourceId = (await upload.json()).sourceId;
+  for (let i = 0; ; i++) {
+    const { sources } = await request(`/learning-helper/v2/sessions/${roster.sessions.main}/sources`);
+    if (sources.some(s => s.id === sourceId && s.status === 'ready')) break;
+    assert.ok(i < 40, 'PDF local readiness timeout'); await delay(500);
+  }
+  // Literal injection marker from B must never be found in A's authenticated scope.
+  const foreign = await request(`/learning-helper/v2/sessions/${roster.sessions.main}/evidence/search?query=IGNORE`);
+  assert.equal(foreign.results.length, 0);
+  result.workspaceIsolation = true; result.imageCapable = roster.imageCapable;
   for (const scenario of scenarios) {
     console.log(`Running real scenario: ${scenario}`);
     const r = await request('/learning-helper-acceptance/run', { scenario }, 195_000);
     const needed = scenario === 'plan' ? ['course_outline_publish', 'study_plan_publish'] : scenario === 'quiz' ? ['quiz_publish'] : [];
     r.deterministicPass = !r.limitFailure && r.checks.completed && r.checks.onlyExpectedTools && r.checks.searchUsed && r.checks.citationsValid && r.checks.readBeforePublish && r.checks.authoredEvidenceRead
       && (scenario === 'insufficient' || r.checks.readUsed) && needed.every(t => r.successfulPublications.includes(t))
-      && (!['qa', 'injection'].includes(scenario) || r.checks.groundedCitation);
+      && (!['qa', 'injection', 'pdf', 'original'].includes(scenario) || r.checks.groundedCitation);
     result.scenarios.push(r); await writeFile(output, scrub(JSON.stringify(result, null, 2)) + '\n', { mode: 0o600 });
     console.log(`${scenario}: deterministic ${r.deterministicPass ? 'PASS' : 'FAIL'}; tools: ${r.tools.join(', ')}`);
   }
-  result.dashboard = await request('/learning-helper/v1/courses/llm-course/dashboard');
+  result.dashboard = await request(`/learning-helper/v2/sessions/${roster.sessions.main}/dashboard`);
   result.status = result.scenarios.every(s => s.deterministicPass) ? 'semantic_review_required' : 'failed';
 } catch (error) {
   // Missing credentials are identified by actual Harness failures, never presented as an accepted run.

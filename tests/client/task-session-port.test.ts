@@ -11,7 +11,7 @@ function setup() {
   const workspace = { items: [{ workspaceId: 'workspace', sessionIds: ['source'] }], archivedSessionIds: [] as string[] };
   const nav = new AbortController();
   const services = { sessions: { list: { getSnapshot: () => list },
-    create: async (opts: { sessionId: string }) => { calls.push(['create', opts]); list.byId[opts.sessionId] = { id: opts.sessionId }; return opts.sessionId; },
+    create: async (opts: { sessionId: string }) => { calls.push(['create', opts]); list.byId[opts.sessionId] = { id: opts.sessionId }; workspace.items[0]!.sessionIds.push(opts.sessionId); return opts.sessionId; },
     binding: () => ({ session: { rename: async (title: string) => { calls.push(['rename', title]); return { ok: true }; },
       prompt: async (...args: unknown[]) => { calls.push(['prompt', ...args]); return { ok: true }; } } }),
     open: (id: string) => { calls.push(['open', id]); list.current = id; }, refresh: async () => {},
@@ -25,7 +25,7 @@ function setup() {
     get conversation() { throw new Error('Original composer must never be accessed'); },
   } as unknown as Context;
   const port = taskSessionPort(ctx);
-  const entry: TaskSession = { courseId: 'course', planId: 'plan', taskId: 'task', title: 'topic', prompt: '学习请求',
+  const entry: TaskSession = { projectId: 'course', planId: 'plan', taskId: 'task', title: 'topic', prompt: '学习请求',
     sessionId: 'session-new', requestId: 'stable-request', createdAt: new Date().toISOString(), seed: port.capture(), phase: 'created' };
   return { port, calls, entry, nav, workspace };
 }
@@ -47,4 +47,11 @@ test('superseded navigation and archived sessions cannot steal focus or silently
   f.workspace.archivedSessionIds.push(f.entry.sessionId);
   await assert.rejects(f.port.open(f.entry, signal), /归档/);
   assert.equal(f.calls.some(c => c[0] === 'open'), false);
+});
+
+test('a task bookmark cannot prepare, send or navigate into another workspace', async () => {
+  const f = setup(); const signal = new AbortController().signal; await f.port.create(f.entry, signal);
+  f.workspace.items[0]!.workspaceId = 'another-workspace';
+  for (const action of [f.port.prepare, f.port.send, f.port.open]) await assert.rejects(action(f.entry, signal), /Workspace/);
+  assert.deepEqual(f.calls.map(c => c[0]), ['create']);
 });

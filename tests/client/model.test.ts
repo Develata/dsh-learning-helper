@@ -16,7 +16,7 @@ test('quiz cards never read raw arguments or render answer keys in pending, sett
     const model = toolCardModel('quiz_publish', block);
     assert.doesNotMatch(JSON.stringify(model), /correctOption|explanation|SECRET|Inspect|argsRaw/);
   }
-  assert.deepEqual(toolCardModel('quiz_publish', settled(value)).navigation, { courseId: 'course', quizId: 'quiz', section: 'quiz' });
+  assert.deepEqual(toolCardModel('quiz_publish', settled(value)).navigation, { projectId: 'course', quizId: 'quiz', section: 'quiz' });
   assert.equal(toolCardModel('quiz_publish', settled(value)).title, '1 题练习已生成');
   for (const name of learningToolNames) assert.doesNotThrow(() => toolCardModel(name, running));
 });
@@ -34,7 +34,7 @@ test('quiz receipt cards preserve navigation and reject malformed counts without
   const receipt = { courseId: 'course', quizId: 'quiz', itemCount: 5, openIn: 'Learning panel' };
   const card = toolCardModel('quiz_publish', settled(receipt));
   assert.equal(card.title, '5 题练习已生成');
-  assert.deepEqual(card.navigation, { courseId: 'course', quizId: 'quiz', section: 'quiz' });
+  assert.deepEqual(card.navigation, { projectId: 'course', quizId: 'quiz', section: 'quiz' });
   for (const itemCount of [0, 21, 1.5, '5', null]) {
     assert.equal(toolCardModel('quiz_publish', settled({ ...receipt, itemCount })).action, '打开学习面板');
   }

@@ -129,7 +129,7 @@ test('real tool rendering reduces model context while preserving typed values, a
   const block: ToolCallBlock = { kind: 'tool-result', callId: 'render', call: null, callTime: 0, time: 0, seq: 1,
     isError: false, subCalls: [], content: result.content };
   const card = toolCardModel('learning_state_get', block);
-  assert.deepEqual(card.navigation, { courseId: 'authoring', section: 'progress' });
+  assert.deepEqual(card.navigation, { projectId: 'authoring', section: 'progress' });
   assert.match(card.lines.join('\n'), /v2.*\n.*Uniform Continuity/);
   assert.equal(toolCardModel('course_outline_publish', { ...block, content: outline.content }).title, '课程结构已建立 · 2 个知识点');
 });

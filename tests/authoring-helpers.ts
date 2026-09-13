@@ -16,7 +16,10 @@ export async function authoringDrafts(h: Awaited<ReturnType<typeof openAuthoring
   await h.service.createCourse({ id: courseId, title: '数学分析', subject: 'calculus', dailyMinutes: 60 });
   await h.evidence.importText(courseId, { filename: 'Lecture 03.md', mimeType: 'text/markdown',
     text: await readFile(new URL('../demo/math-analysis/lecture-03.md', import.meta.url), 'utf8') });
-  const ids = (query: string) => h.evidence.search({ courseId, query }).results.map(r => r.chunkId);
+  return groundedDrafts(h.evidence, courseId);
+}
+export function groundedDrafts(evidence: EvidenceService, courseId: string) {
+  const ids = (query: string) => evidence.search({ courseId, query }).results.map(r => r.chunkId);
   const continuity = ids('Continuity 连续性'); const uniform = ids('一致连续');
   const outline: CourseOutlineDraft = { courseId, concepts: [
     { id: 'continuity', name: 'Continuity', aliases: ['连续性'], prerequisiteIds: [], evidenceChunkIds: continuity },
