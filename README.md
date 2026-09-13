@@ -50,7 +50,7 @@ flowchart LR
 
 ## 快速开始
 
-v0.2 目前保留在 `feat/workspace-v02` 分支，尚未发布 tag；默认分支与 `v0.1.0` 仍用于已发布版本。以下 Docker 流程构建运行壳锁定的已推送插件，本地公式显示、review 修复和演示素材可能更新，差异见 [CURRENT](docs/CURRENT.md)。运行壳与部署文件在 [Develata/learning-helper](https://github.com/Develata/learning-helper)：
+v0.2 目前保留在 `feat/workspace-v02` 分支，尚未发布 tag；默认分支与 `v0.1.0` 仍用于已发布版本。公式显示、review 修复和演示素材已推送到该开发分支；以下 Docker 流程仍以运行壳版本锁中的 exact plugin SHA 为构建输入，源码推送与容器实际部署的区别见 [CURRENT](docs/CURRENT.md)。运行壳与部署文件在 [Develata/learning-helper](https://github.com/Develata/learning-helper)：
 
 ```bash
 git clone --branch feat/workspace-v02 https://github.com/Develata/learning-helper.git
