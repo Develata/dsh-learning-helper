@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { mathConceptName, mathPlanReason, mathQuestions, checkMathQuiz, checkMathFallback } from './math-browser-checks.mjs';
+import { checkMinerUSettings, checkSourceParseWarnings } from './mineru-browser-checks.mjs';
 
 async function deadline(promise, label) {
   let timer;
@@ -87,6 +88,8 @@ export async function browserSmoke({ web, harness, plugin, work, workspacePath, 
     await panel.getByLabel('课程名称', { exact: true }).fill('数学分析 · 三天复习');
     await panel.getByRole('button', { name: '初始化', exact: true }).click();
     await panel.getByRole('button', { name: '资料', exact: true }).click();
+    await checkMinerUSettings(page, panel);
+    await checkSourceParseWarnings(page, panel);
     await panel.locator('input[type=file]').setInputFiles(join(plugin, 'demo/math-analysis/lecture-03.md'));
     let sourceFailed = false;
     await page.route('**/learning-helper/v2/sessions/*/sources/text', async route => {

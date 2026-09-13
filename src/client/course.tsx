@@ -4,6 +4,8 @@ import type { Source } from './types.js';
 import { request, sessionPath, errorText, RequestError } from './api.js';
 import { defaultExamDate, validateFile } from './model.js';
 import { Failure } from './common.js';
+import { MinerUSettings } from './mineru-settings.js';
+import type { MinerUCredentialStatus } from './mineru-settings.js';
 export function InitializeProject({ sessionId, onCreated }: { sessionId: string; onCreated: () => void }) {
   const [title, setTitle] = useState(''); const [subject, setSubject] = useState('数学分析');
   const [exam, setExam] = useState(defaultExamDate); const [minutes, setMinutes] = useState(60);
@@ -52,12 +54,14 @@ export function Sources({ sessionId, sources, reload }: { sessionId: string; sou
   const retryAction = useRef<(() => void) | null>(null);
   const flight = useRef<AbortController | null>(null); const base = sessionPath(sessionId);
   const settings = useResource(sessionId, async signal => {
-    const [config, capability] = await Promise.all([request<WorkspaceConfig>(base + '/config', signal), request<{ vision: boolean }>(base + '/capabilities', signal)]);
-    return { config, capability };
+    const [config, capability, credential] = await Promise.all([request<WorkspaceConfig>(base + '/config', signal), request<{ vision: boolean }>(base + '/capabilities', signal),
+      request<MinerUCredentialStatus>(base + '/mineru-credential', signal).catch(() => ({ configured: false, writable: false }))]);
+    return { config, capability, credential };
   }, configReload);
   const mode = modeOverride ?? (settings.status === 'success' ? settings.data.config.documentParsing.pdfMode : 'auto');
   const vision = settings.status === 'success' && settings.data.capability.vision;
-  const configured = settings.status === 'success' && settings.data.config.documentParsing.mineru.enabled;
+  const configured = settings.status === 'success' && settings.data.config.documentParsing.mineru.enabled
+    && (settings.data.config.documentParsing.mineru.provider !== 'cloud' || settings.data.credential.configured);
   const pending = sources.filter(s => s.status === 'processing' || s.parsing === 'processing' || s.assetization === 'processing').map(s => s.id).join(',');
   useEffect(() => () => flight.current?.abort(), []);
   useEffect(() => {
@@ -116,7 +120,7 @@ export function Sources({ sessionId, sources, reload }: { sessionId: string; sou
     </fieldset>}
     <Button variant="outline" disabled={!file || busy || !!(file && validateFile(file)) || (!!file && /\.pdf$/i.test(file.name) && (settings.status !== 'success' || (mode === 'high-accuracy' && !vision)))} onClick={() => void upload()}>{busy ? '正在处理…' : '上传资料'}</Button>
     {error && <Failure message={error} retry={() => retryAction.current?.()}/>}{notice && <p role="status">{notice}</p>}
-    {settings.status === 'success' && <MinerUSettings sessionId={sessionId} initial={settings.data.config} onSaved={() => setConfigReload(n => n + 1)}/>}
+    {settings.status === 'success' && <MinerUSettings sessionId={sessionId} initial={settings.data.config} credential={settings.data.credential} onSaved={() => setConfigReload(n => n + 1)}/>}
     {settings.status === 'error' && <Failure message={settings.error} retry={() => setConfigReload(n => n + 1)}/>}
     {!sources.length ? <p className="lh-empty">还没有资料。上传一份讲义，让回答与练习有据可查。</p> : <ul className="lh-sources">{sources.map(s => <li key={s.id}>
       <div className="lh-row"><strong>{s.filename}</strong><Tag tone={s.status === 'ready' ? 'success' : s.status === 'failed' ? 'danger' : 'neutral'}>
@@ -124,7 +128,8 @@ export function Sources({ sessionId, sources, reload }: { sessionId: string; sou
       <p className="lh-muted">{s.pageCount ? `${s.pageCount} 页 · ` : ''}{s.chunkCount} 个资料片段{ s.originalAsset ? ' · 原始 PDF 已归档' : ''}</p>
       <p className="lh-muted">规范化资料：{s.parser.startsWith('mineru') ? 'MinerU Markdown' : s.parser.startsWith('vision') ? '视觉解析' : s.mimeType === 'application/pdf' ? 'PDF.js' : '原始文本'}</p>
       {s.parsing === 'processing' && <p role="status">正在完成页面解析，已有证据仍可查询…</p>}
-      {s.parseWarning && <p role="status">{s.parseWarning === 'vision-unavailable' ? '当前模型不支持视觉解析。' : '增强解析未完成。'}已有可查询内容保持可用；可配置模型后重新上传。</p>}
+      {/* Keep parsing history in Source; an active MinerU generation supersedes its vision warning. */}
+      {s.parseWarning && !(s.status === 'ready' && s.parser.startsWith('mineru-')) && <p role="status">{s.parseWarning === 'vision-unavailable' ? '当前模型不支持视觉解析。' : '增强解析未完成。'}已有可查询内容保持可用；可配置模型后重新上传。</p>}
       {s.assetization === 'processing' && <p role="status">正在转换长期 Markdown…</p>}
       {s.assetization === 'failed' && <p role="status">长期 Markdown 转换失败，已有 PDF 证据仍可使用。</p>}
       {s.assetization === 'outcome-unknown' && <p role="alert">提交结果未知。请先检查 MinerU，确认后再重试，避免创建重复远端任务。</p>}
@@ -132,24 +137,4 @@ export function Sources({ sessionId, sources, reload }: { sessionId: string; sou
         <Button disabled={busy} onClick={() => void assetize(s.id, s.assetization === 'outcome-unknown')}>{s.assetization === 'outcome-unknown' ? '已检查 Provider，明确重新提交' : s.assetization === 'failed' ? '重试 MinerU' : '优化为长期 Markdown'}</Button>}
     </li>)}</ul>}
   </section>;
-}
-function MinerUSettings({ sessionId, initial, onSaved }: { sessionId: string; initial: WorkspaceConfig; onSaved: () => void }) {
-  const [url, setUrl] = useState(initial.documentParsing.mineru.baseUrl ?? '');
-  const [enabled, setEnabled] = useState(initial.documentParsing.mineru.enabled); const [busy, setBusy] = useState(false); const [error, setError] = useState('');
-  const flight = useRef<AbortController | null>(null); useEffect(() => () => flight.current?.abort(), []);
-  async function save() {
-    if (flight.current) return;
-    const controller = new AbortController(); flight.current = controller; setBusy(true); setError('');
-    try { await request(sessionPath(sessionId) + '/config', controller.signal, { ...initial, documentParsing: { ...initial.documentParsing,
-      mineru: { ...initial.documentParsing.mineru, enabled, ...(url.trim() ? { baseUrl: url.trim() } : { baseUrl: undefined }) } } });
-      if (!controller.signal.aborted) onSaved();
-    } catch (e) { if (!controller.signal.aborted) setError(errorText(e)); }
-    finally { flight.current = null; if (!controller.signal.aborted) setBusy(false); }
-  }
-  return <details className="lh-form"><summary>配置 MinerU API</summary><p className="lh-muted">支持官方自托管 protocol 2；填写你信任的服务地址。Token 由运行环境提供，不写入 Workspace。</p>
-    <label>服务地址<input type="url" value={url} placeholder="http://127.0.0.1:8000" disabled={busy} onChange={e => setUrl(e.target.value)}/></label>
-    <label><span><input type="checkbox" checked={enabled} disabled={busy} onChange={e => setEnabled(e.target.checked)}/>启用 MinerU</span></label>
-    <Button disabled={busy || (enabled && !url.trim())} onClick={() => void save()}>{busy ? '正在保存…' : '保存配置'}</Button>
-    {error && <Failure message={error} retry={() => void save()}/>}
-  </details>;
 }

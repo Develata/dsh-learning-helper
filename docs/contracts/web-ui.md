@@ -12,7 +12,9 @@
 | GET /sources | Source 状态、page/chunk count、parser、parsing/assetization、独立 quota usage、100份提示 |
 | POST /sources/text | filename/mimeType/text；ready 或 deduplicated |
 | POST /sources/pdf?filename=…&mode=… | binary PDF；mode 省略时使用 Workspace documentParsing.pdfMode；202 sourceId，Host 承接有界解析，随后读取 sources 状态 |
-| GET /config；POST /config | 严格非 secret Workspace 配置；可信 MinerU URL，不能写 token |
+| GET /config；POST /config | 严格非 secret Workspace 配置；self-hosted 可信 URL，cloud 固定官方 endpoint，不能写 token |
+| GET /mineru-credential | 当前 Workspace 的 `{configured,writable}`，no-store，不回传密钥 |
+| POST /mineru-credential；DELETE /mineru-credential | 严格 `{token}`（1..8192 ASCII 可见字符，body≤16KiB）保存/移除主机凭据 record；不成为 Agent tool |
 | GET /capabilities | 当前会话模型是否明确声明 image 能力 |
 | POST /assetize | sourceId/retryUnknown?；202 bounded async continuation，不等待长轮询响应 |
 | GET /evidence/search；POST /evidence/read | [Evidence contract](evidence.md)；Agent 在同进程直接调用服务 |
@@ -22,7 +24,9 @@
 
 `/learning-helper/v1/health` 与 `/v2/health` 保留 authenticated health。v1 courses routes 不再注册；不能用旧 HTTP API 遍历全局数据。Dashboard 是从 learning snapshot 派生的只读投影，不扩充 durable schema、不读取 corpus。课题名称、状态不用伪精确 mastery 百分比。
 
-原生 `dsh.client`、right sidebar page-type tab、header.actions/空会话 input.left、typed tool views；不占 corner、不创建 SPA/drawer。初始化→资料→计划/进度/练习，PDF 模式为 auto/local-fast/high-accuracy；视觉不可用时高精度明确禁用。独立 MinerU 选项与 config；PDF 已可用但 assetization failed 时保留证据，提供重试。解析与 assetization 分开显示，避免 local Ready 被误认为视觉解析已完成。100 份 soft warning、200 hard limit。
+原生 `dsh.client`、right sidebar page-type tab、header.actions/空会话 input.left、typed tool views；不占 corner、不创建 SPA/drawer。初始化→资料→计划/进度/练习，PDF 模式为 auto/local-fast/high-accuracy；视觉不可用时高精度明确禁用。独立 MinerU 选项与 config：self-hosted protocol 2 或 mineru.net cloud v4，旧 provider 缺失配置保留自托管语义。云端密钥用 password input，保存后清空草稿，页面只显示是否保存；不进 local/session storage，使用默认 Host credentials service，修改影响后续任务。云端上传前明确 PDF 会发送给 mineru.net；首次任务验证密钥，不把保存回执当作认证成功。云端≤200页。凭据状态暂不可读时禁用云端转换，但本地PDF仍可上传。PDF 已可用但 assetization failed 时保留证据，提供重试。解析与 assetization 分开显示，避免 local Ready 被误认为视觉解析已完成。100 份 soft warning、200 hard limit。
+
+Source 的 `parsing/parseWarning` 保留最初 PDF/视觉解析历史；只有当前 `status=ready` 且 active parser 为 `mineru-*` 时，UI 不再显示已被 MinerU 资料替代的旧视觉失败提示。不能仅凭 `assetization=ready` 隐藏本地解析警告；新的 MinerU 转换失败仍单独显示。此显示规则不改写历史状态，也不要求学生为旧警告重新上传。
 
 PDF 选择器默认读取 Workspace documentParsing.pdfMode，配置未就绪前不能上传 PDF。学生本次明确选择可覆盖默认值；刷新 MinerU 设置不重置该选择，也不因单次上传改写 Workspace 默认值。
 

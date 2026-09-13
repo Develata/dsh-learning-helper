@@ -7,7 +7,7 @@ const messages: Record<string, string> = {
 };
 export class RequestError extends Error { constructor(readonly code: string) { super(messages[code] ?? '网络请求未完成，请重试。'); } }
 /** Same-origin cookie carrier only; no launch token or Host stack enters UI state. */
-export async function request<T>(path: string, signal: AbortSignal, body?: unknown, binary = false): Promise<T> {
+export async function request<T>(path: string, signal: AbortSignal, body?: unknown, binary = false, method: 'GET' | 'POST' | 'DELETE' = body === undefined ? 'GET' : 'POST'): Promise<T> {
   if (!/^\/sessions\/[a-zA-Z0-9_-]{1,80}\//u.test(path)) throw new Error('Unsupported Learning API path');
   const controller = new AbortController();
   const abort = () => controller.abort(signal.reason);
@@ -15,7 +15,7 @@ export async function request<T>(path: string, signal: AbortSignal, body?: unkno
   const timer = setTimeout(() => controller.abort(new DOMException('Request timed out', 'TimeoutError')), binary ? 45_000 : 12_000);
   try {
     signal.throwIfAborted();
-    const response = await fetch(ROOT + path, { method: body === undefined ? 'GET' : 'POST',
+    const response = await fetch(ROOT + path, { method,
       credentials: 'same-origin', mode: 'same-origin', cache: 'no-store', signal: controller.signal,
       ...(body === undefined ? {} : { headers: { 'content-type': binary ? 'application/pdf' : 'application/json' }, body: binary ? body as Blob : JSON.stringify(body) }) });
     if (!response.ok) {
