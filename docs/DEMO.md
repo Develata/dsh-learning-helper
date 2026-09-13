@@ -25,3 +25,20 @@ Web 录制用专用 Compose project，例如 `docker compose -p learning-helper-
 ## v0.2 追加展示（可单独录制）
 
 在同一 Workspace 上传小 PDF，选择本地快速，展示原件已归档、页数与 page citation。若配置了官方 MinerU，则演示长期 Markdown 转换及 active generation；未配置时展示真实 capability gate，不伪造转换成功。切到另一个空 Workspace，面板要求初始化且不显示原资料；切回后学习状态仍在。视觉模式仅在实际模型声明 image 能力时演示。
+
+## 仓库演示素材
+
+[v0.2 MP4 视频](videos/learning-helper-v02.mp4) 时长 1 分 55 秒，H.264 / 1280 × 984，配有烧录中文字幕和[独立 WebVTT 字幕](videos/learning-helper-v02.vtt)，无配音。[计划](images/plan.png)、[数学练习](images/quiz.png)、[进度](images/progress.png)、[资料](images/sources.png)四张截图来自同一次真实 Chromium 录制，替换旧 v0.1 素材。
+
+录制基线：插件 `5d1f7a496b9f7ba3368c11b6c1ec7b67403dc2e2` 的运行代码，Harness `0.1.5-rc.2`，2026-09-13。素材展示当前本地开发版，不表示运行壳已经更新部署。
+
+该视频展示 Workspace 初始化 → Markdown 上传 → 3 天计划 → 数学练习 → 故意错两道一致连续题 → Weak / 计划 v2 → PDF 本地解析与原件归档 → 刷新恢复。录制使用实际 packed plugin、正式工具分发与 Host 持久化；outline/plan/quiz 的 draft 由确定性 fixture 提供，不调用外部模型。视频底部持续标注这一边界；不能将它替代上方真实 Agent 问答/作者流程的语义验收。没有演示真实视觉解析或 MinerU 转换。
+
+复现使用已有 packed integration 环境，另需 Linux `ffmpeg`（libx264、libass、drawtext）、DejaVu Sans 与 Droid Sans Fallback 字体；Chromium 使用 Harness 已安装的 Playwright。录制入口在 [`scripts/record-demo.mjs`](../scripts/record-demo.mjs)：
+
+```bash
+LH_DEMO_OUTPUT="$PWD/artifacts/demo-v02" \
+  pnpm run test:integration -- /absolute/path/to/learning-helper
+```
+
+命令创建独立临时 DSH_HOME 和 Workspace，不读取日常模型凭证。录制成功同时验证答题前公开 payload 无 key、3/5 评分、Weak、v2、20 分钟复习与 3 题、PDF 页数/归档以及进程重启后的数据。输出 MP4、字幕、PNG 和不含凭证的 `recording.json`；原始 WebM 留在已忽略的 `artifacts/`。人工检查画面与字幕后，仅将最终四张 PNG、MP4 和 WebVTT 更新到 `docs/images/`、`docs/videos/`。

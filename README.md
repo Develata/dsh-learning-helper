@@ -18,12 +18,22 @@ flowchart LR
 
 核心演示：一致连续连续答错两题 → **Weak** → 复习队列 → 计划 **v1 → v2** → 明天增加 **20 分钟复习 + 3 道针对题**。学生能够看到计划为什么改变。
 
-<p>
-  <img src="docs/images/quiz.png" width="360" alt="学生选择五题练习的选项，提交前没有答案解释" />
-  <img src="docs/images/plan.png" width="360" alt="计划 v2 显示两次一致连续错题以及新增的 20 分钟复习和 3 道练习" />
-</p>
+[观看 v0.2 演示视频（1 分 55 秒，MP4，中文字幕）](docs/videos/learning-helper-v02.mp4) · [独立字幕](docs/videos/learning-helper-v02.vtt) · [录制说明](docs/DEMO.md#仓库演示素材)
 
-v0.1 的真实 Harness 浏览器截图；课程与答题数据来自确定性演示 fixture。v0.2 验收状态见 CURRENT。
+![计划 v2：两道一致连续错题，触发明天的 20 分钟复习与 3 道针对题](docs/images/plan.png)
+
+<details>
+<summary>更多画面：数学练习、学习进度、Workspace PDF 资料</summary>
+
+![练习中的极限公式与选项直接渲染，提交前没有答案和解析](docs/images/quiz.png)
+
+![一致连续显示 Weak 和两次作答证据，连续性显示 Okay](docs/images/progress.png)
+
+![Workspace 资料列表：Markdown 与本地解析 PDF 已就绪，保留页数和原件归档状态](docs/images/sources.png)
+
+</details>
+
+以上为当前 v0.2 开发版的真实 Harness Web 录屏与截图。检索、发布、作答和重排使用实际安装的插件；课程结构与题目由确定性 fixture 提供，**本视频不代表自主 LLM 验收**。模型验收和发布状态见 [CURRENT](docs/CURRENT.md)。
 
 ## 学习体验
 
