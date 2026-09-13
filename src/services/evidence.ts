@@ -95,6 +95,7 @@ export class EvidenceService {
         signal.addEventListener('abort', rejectAbort, { once: true });
         if (signal.aborted) rejectAbort();
       });
+      if (source.mimeType === 'application/pdf') throw new LearningError('invalid-input', 'Use the PDF import pipeline');
       const parsed = await Promise.race([this.parser.parse({ filename: source.filename, mimeType: source.mimeType, text }, signal), cancelled]);
       signal.throwIfAborted();
       const checked = validate(z.array(parsedChunkSchema).min(1).max(L.chunks), parsed);

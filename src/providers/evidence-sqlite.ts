@@ -1,3 +1,4 @@
+import { validateTextLocators } from '../domain/evidence-validation.js';
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
@@ -25,12 +26,15 @@ function chunkFrom(row: Row): SourceChunk {
   return sourceChunkSchema.parse({ id: row.id, sourceId: row.source_id, courseId: row.course_id, ordinal: row.ordinal,
     text: row.text, locator: JSON.parse(String(row.locator)) });
 }
+export function citationLabel(text: string): string {
+  return text.replace(/[\[\]\\<>`]/g, c => ({ '[': '［', ']': '］', '\\': '＼', '<': '＜', '>': '＞', '`': '｀' })[c]!);
+}
 export function citationFor(source: Source, chunk: SourceChunk): Citation {
   const loc = chunk.locator;
   const place = loc.kind === 'pdf' ? `p.${loc.page}` : `${loc.section ? `${loc.section} · ` : ''}L${loc.startLine}–${loc.endLine}`;
   return { chunkId: chunk.id, sourceId: source.id, filename: source.filename, locator: loc,
     canonicalRef: `learning-evidence://${source.courseId}/${source.id}/${chunk.id}`,
-    citationLabel: `${source.filename} · ${place}`.replace(/[\[\]\\<>`]/g, c => ({ '[': '［', ']': '］', '\\': '＼', '<': '＜', '>': '＞', '`': '｀' })[c]!) };
+    citationLabel: citationLabel(`${source.filename} · ${place}`) };
 }
 /** Own database, public node:sqlite only. Never opens state.db or Harness storage internals. */
 export class SqliteEvidenceStore implements EvidenceStore {
@@ -100,21 +104,11 @@ export class SqliteEvidenceStore implements EvidenceStore {
       return;
     }
     if (!chunks.length || chunks.length !== source.chunkCount || chunks.length > L.chunks) throw new Error('Evidence chunk count mismatch');
-    let line = 1; let column = 1;
     for (const [ordinal, chunk] of chunks.entries()) {
       if (chunk.sourceId !== source.id || chunk.courseId !== source.courseId || chunk.ordinal !== ordinal || chunk.id !== chunkIdentity(source.id, ordinal)
         || !chunk.text.isWellFormed()) throw new Error('Evidence chunk identity/Unicode mismatch');
-      const loc = chunk.locator;
-      if (loc.kind !== 'text' || loc.startLine !== line || loc.startColumn !== column) throw new Error('Evidence locator start mismatch');
-      // A trailing newline belongs to the preceding line in the displayed range.
-      const beforeEnd = chunk.text.endsWith('\n') ? chunk.text.slice(0, -1) : chunk.text;
-      const parts = beforeEnd.split('\n');
-      const endLine = line + parts.length - 1;
-      const endColumn = (parts.length === 1 ? column : 1) + parts.at(-1)!.length + (chunk.text.endsWith('\n') ? 1 : 0);
-      if (loc.endLine !== endLine || loc.endColumn !== endColumn || endLine - line >= L.chunkLines) throw new Error('Evidence locator end mismatch');
-      if (chunk.text.endsWith('\n')) { line = endLine + 1; column = 1; }
-      else { line = endLine; column = endColumn; }
     }
+    validateTextLocators(chunks);
     const text = chunks.map(c => c.text).join('');
     if (!text.isWellFormed() || text.includes('\0') || hashText(text) !== source.contentHash || Buffer.byteLength(text) !== source.byteSize) throw new Error('Evidence content hash mismatch');
   }

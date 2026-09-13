@@ -16,10 +16,16 @@ export const textLocatorSchema = z.strictObject({ kind: z.literal('text'), secti
 export const locatorSchema = z.discriminatedUnion('kind', [textLocatorSchema,
   z.strictObject({ kind: z.literal('pdf'), page: z.number().int().positive(), block: z.number().int().nonnegative() })]);
 export const sourceSchema = z.strictObject({ id: sourceIdSchema, courseId: idSchema, filename: filenameSchema,
-  mimeType: z.enum(['text/plain', 'text/markdown']), contentHash: z.string().regex(/^[a-f0-9]{64}$/),
-  parser: z.literal('text-v1'), status: z.enum(['processing', 'ready', 'failed']),
-  byteSize: z.number().int().min(1).max(EVIDENCE_LIMITS.sourceBytes),
-  chunkCount: z.number().int().min(0).max(EVIDENCE_LIMITS.chunks), createdAt: z.iso.datetime(), updatedAt: z.iso.datetime(),
+  mimeType: z.enum(['text/plain', 'text/markdown', 'application/pdf']), contentHash: z.string().regex(/^[a-f0-9]{64}$/),
+  parser: z.string().min(1).max(80), status: z.enum(['processing', 'ready', 'failed']),
+  byteSize: z.number().int().min(1).max(64 * 1024 * 1024),
+  chunkCount: z.number().int().min(0).max(8192), createdAt: z.iso.datetime(), updatedAt: z.iso.datetime(),
+  pageCount: z.number().int().min(1).max(2000).optional(),
+  activeGenerationId: idSchema.optional(), canonicalAsset: z.string().max(500).optional(), originalAsset: z.string().max(500).optional(),
+  assetization: z.enum(['idle', 'processing', 'ready', 'failed', 'outcome-unknown']).optional(),
+  parseMode: z.enum(['local-fast', 'auto', 'high-accuracy']).optional(),
+  parsing: z.enum(['processing', 'ready', 'failed']).optional(),
+  parseWarning: z.enum(['vision-unavailable', 'vision-failed', 'no-extracted-text']).optional(),
   errorCode: z.enum(['interrupted', 'parse-failed', 'cancelled', 'timeout', 'limit-exceeded']).optional() })
   .refine(s => s.status === 'ready' ? s.chunkCount > 0 && s.errorCode === undefined
     : s.chunkCount === 0 && (s.status === 'failed' ? s.errorCode !== undefined : s.errorCode === undefined), 'Invalid source lifecycle state');
