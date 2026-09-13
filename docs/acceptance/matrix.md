@@ -18,6 +18,7 @@
 | explicit v1 migration / original untouched | verified | migration：完整已评分fixture、概念/计划/练习/citations相同、重复幂等、原库hash不变 |
 | native student UI / quiz / Weak→v2 | verified | packed Chromium：初始化/上传/工具卡片/键盘作答/丢包重试/刷新/错误恢复 |
 | safe cards / pre-submit keys absent | verified | student/client + Chromium public payload/DOM/quiz_publish card |
+| learning math / Markdown display | verified | math-browser-checks + packed Chromium：四种公式分隔符、真实 KaTeX 字体、公式选项点击、提交后解析/知识点/工具卡、错误 TeX 与 HTML/URL 回退；1440/1024/390 light/dark，长公式可滚动且计划不撑宽 |
 | task sessions / draft / retry | verified | client task tests + packed Chromium：继承Workspace/model、自动发送、原草稿、继续不重发 |
 | long Chinese / final visual / soft-warning UI | verified | Chromium 1440/1024/390 light/dark截图；100条source投影；checkbox尺寸断言与PDF错误状态 |
 | actual Harness LLM workspace QA / PDF | verified | newapi/gpt-5.6-luna实际search/read和准确citation；六场景程序检查与数学语义复核通过 |

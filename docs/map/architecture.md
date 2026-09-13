@@ -11,6 +11,7 @@ CodeGraph/代码拥有当前事实；本文件只导航，设计见 architecture
 - `tools/workspace-tools.ts`：7个已注册工具，无Agent courseId；`policy/grounding.ts`一份可信policy。
 - `host/workspace-http.ts`：authenticated Session地址；`client/index.tsx`/`panel.tsx`：官方Session/Workspacehooks。
 - `client/course.tsx`资料/初始化；`plan.tsx`/`quiz.tsx`学习闭环；`task-session-port.ts`公开session调用；tool views只展示。
+- `client/learning-content.tsx`：学习内容统一接入公开 MarkdownText/KaTeX；`scripts/math-browser-checks.mjs` 在 packed Web 中验证排版、公式选项与不可信内容回退。
 - v1 `storage-domain` / `evidence-sqlite` / old tools仅用于显式迁移和保留回归证明，不由v2入口注册。
 
 查询示例：`codegraph explore 'WorkspaceProjects registerWorkspaceTools'`；`codegraph explore 'PdfSources Assetization activate'`；`codegraph explore 'LearningService submit getDashboard'`。

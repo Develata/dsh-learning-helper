@@ -33,6 +33,7 @@ v0.1 的真实 Harness 浏览器截图；课程与答题数据来自确定性演
 - 可选外部官方 MinerU protocol 2：异步转长期 Markdown，原子切换当前 representation，历史引用持续可读。
 - 七个 session-bound tools 完成检索、阅读、grounded outline/plan/quiz、原件按需核验；Agent 不提交 courseId 或路径。
 - 原生 Learning 面板：计划、进度、交互 MCQ、解释/刷新恢复、任务独立学习会话。
+- 题目、选项、解析和计划支持 Markdown/LaTeX 数学公式；长公式可在窄屏内横向滚动。
 - 确定性评分与可解释重排；双击和丢失响应重试不重复记账。
 
 功能证明与最终模型/部署验收分别记录在 [验收矩阵](docs/acceptance/matrix.md) 和 [当前状态](docs/CURRENT.md)。普通自动测试不调用外部模型。
