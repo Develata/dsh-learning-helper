@@ -3,7 +3,8 @@
 | 模块 | Authority / 依赖方向 |
 |---|---|
 | domain / policy | 结构、不变量、确定性评分/适应策略；不依赖数据库、模型或 UI |
-| services/learning、authoring、student | 唯一学习 mutation owner；提案编排、只读学生投影；通过 EvidenceService 验证引用 |
+| services/learning | 唯一学习 mutation owner；验证发布与提交，经 LearningStore 原子更新聚合 |
+| services/authoring、student | AuthoringService 读取 Evidence 验证引用后调用 LearningService；student 仅派生学生只读投影，不写学习状态 |
 | workspace | 公开 Session membership → root/manifest；每次请求重新解析；最多 8 个有界缓存的 WorkspaceProject handles，不是全局 Course registry |
 | providers/workspace-state | 每 Workspace 的单 aggregate SQLite；沿用现有 state-schema/replay，单写队列 |
 | providers/workspace-evidence | Source/generation/chunks/FTS、canonical 文件与容量；active switch 原子，历史 chunk 不删除 |

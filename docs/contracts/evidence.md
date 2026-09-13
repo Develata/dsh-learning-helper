@@ -1,6 +1,6 @@
 # Evidence contract v2
 
-Authority：Workspace 是 Source、archive、canonical asset、Evidence 与 provenance 的边界。Model/user HTTP 不能传 root/courseId 来选库；Host 从当前 authenticated Session membership 解析。
+Authority：Workspace 是 Source、archive、canonical asset、Evidence 与 provenance 的边界。Model/user HTTP 不能传 root/courseId 来选库；Host 从当前 authenticated Session membership 解析。当前 `.learning-helper/evidence.db` 的 `PRAGMA user_version=2`；未知版本或损坏拒绝打开。v0.1 schema1 只通过显式[迁移](../operations/migration-v1.md)进入新版，不原地升级。
 
 Source：raw PDF SHA-256 或规范化 TXT hash 去重；同 Workspace 相同内容只一份，不同 Workspace 独立。TXT 保留 UTF-8、heading 与精确 line/column，canonical file 从规范化全文写出。PDF 原件位于 `.learning-helper/archive/<sourceId>/original.pdf`；不作为普通搜索语料，不删除。
 
@@ -13,7 +13,7 @@ Generation：完整验证后一次 SQLite transaction 激活 Source.activeGenera
 | 边界 | 上限 |
 |---|---|
 | Sources | 200/Workspace，100 起 UI 软提醒 |
-| TXT/Markdown | 512 KiB/份，保留旧 parser chunk 限制 |
+| TXT/Markdown | 512 KiB/份、最多512 chunks；每chunk最多4000 UTF-16 code units / 80行 |
 | PDF upload/archive | 64 MiB/份；2000 页；archive 2 GiB/Workspace |
 | 一代文本/chunks | 8 MiB / 8192 chunks |
 | 历史代尝试 | 每 source 最多 10（包括失败但已预留身份），同身份重试复用 |

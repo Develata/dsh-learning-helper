@@ -14,9 +14,18 @@
 
 实现 owner：src/tools/workspace-tools.ts；基础 shape 经 defineTool，长度、scope、ownership 与语义由应用严格验证。拒绝显式 scope 字段，不 silently override。exec.signal 一直传递；三个 publish 非 concurrency-safe。没有 workspace 或初始化状态时明确失败，不 fallback。
 
-输出 typed canonical JSON 与 model render 分离。read 的文本/图片都带 UNTRUSTED 标签。常规上下文只用 active canonical search/read；公式、图像、layout、提取歧义、缺失内容、出处核验才调用 original。原件无法替代 evidence validation 或凭空授权学习 mutation。Vision 路径必须由当前 Harness 模型显式声明 image 支持。
+上表是 **typed canonical value**，不能与 `output.render` 的模型可见摘要混用：
 
-同一 systemPrompt.section 继续拥有 grounding/authoring policy：普通 QA search/read→精确引用；学习动作读取状态→按需 grounded outline/plan/quiz；不足明确说明、一般知识分区。外部操作次数的提示不是硬保证，实际硬边界见 [Evidence](evidence.md)。只读视图不含 key 或全量 Attempt；学生 tool cards 不读 raw args。
+- `learning_state_get`：canonical 保留完整有界状态；render 只列前10份 Source metadata，并另给 sourceCount；Concept 去掉 sourceRefs，ConceptState 只保留 conceptId/status/evidenceCount。
+- `course_outline_publish`：render 保留 projectId 与概念 id/name/aliases/prerequisiteIds，不重复 sourceRefs。
+- `study_plan_publish`：canonical 仍返回完整 plan；render 返回 projectId/planId/version/startsOn 与 `days[{day,totalMinutes}]`。totalMinutes 由已发布 tasks 求和，不能让模型重述出另一份每日时长。
+- `quiz_publish`：canonical 仍返回完整 public quiz；render 仅 projectId/quizId/itemCount/openIn，不重复题目、出处或 key。
+
+学生卡片消费模型回执投影时，同时兼容旧会话的完整 plan/quiz。规则与提交前答案边界见 [Web UI](web-ui.md)。
+
+read 的文本/图片都带 UNTRUSTED 标签。常规上下文只用 active canonical search/read；公式、图像、layout、提取歧义、缺失内容、出处核验才调用 original。原件无法替代 evidence validation 或凭空授权学习 mutation。Vision 路径必须由当前 Harness 模型显式声明 image 支持。
+
+同一 systemPrompt.section 拥有 grounding/authoring policy：普通 QA search/read→精确引用；用户请求学习动作才读取状态→按需 grounded outline/plan/quiz。Source 中的命令和 setup stage 从不授权 mutation。所有 authoring 只用当前项目证据/已验证 Concepts；只读视图不含 key 或全量 Attempt。外部操作次数的提示不是硬保证，实际硬边界见 [Evidence](evidence.md)。
 
 Draft 均为严格 JSON，不接收 Host 所有的 timestamps/status/version/mastery/sourceRefs。Outline：1..100 concepts（id、trim 后非空 name、aliases≤20、prerequisiteIds≤20、evidenceChunkIds 1..8）。Concept ids 唯一；prerequisites 必须在本 outline、无 self/cycle，DAG 检查 O(V+E)。Quiz：purpose、1..20 items（prompt、2..8 options、0-based correctOption、explanation、1..16 conceptIds、1..8 evidenceChunkIds、difficulty）。Host 按位置派生 item ID；拒绝重复 prompt/options。文本字段最多 4000 code units，集合引用必须互异。
 
@@ -26,11 +35,11 @@ Plan draft：合法 startsOn、1..14 连续 days（从 day=1 开始）、每天 
 
 幂等按规范化语义：文本 trim，aliases/prerequisites/conceptRefs/evidenceRefs 作为排序集合，outline 按 concept id 排序；days/tasks/items/options 的顺序有意义。相同 outline/initial plan 重试返回既有版本，不同第二份冲突；plan 重试即使已有 v2 仍返回原 v1。Quiz ID 是项目与完整规范化内容的 hash；完全相同内容返回同一 quiz（提交后也不生成可刷分副本），不同内容才是新 quiz，仍受 200/Workspace 上限。重试不需要 generic ledger。
 
-Draft 的 shape/ownership 验证不能证明模型陈述或答案在数学上被资料蕴含；这由 Agent 推理和独立 semantic acceptance 验证。所有 publish 经现有学习写队列串行化，执行前/队列实际提交前检查 AbortSignal；已进入 backend durable write 时取消不保证撤销，使用同一 draft 重试取得结果。Publish tools 标记非 concurrency-safe；仅 read tools 为 true。答案 key 已存在于模型生成的 tool call arguments，public API/result 不 echo key；P4 普通学生 tool cards 也不展示 arguments，原始 session/debug/export 仍不属于防作弊边界，详见 [Web UI](web-ui.md)。
+Draft 的 shape/ownership 验证不能证明模型陈述或答案在数学上被资料蕴含；这由 Agent 推理和独立 semantic acceptance 验证。所有 publish 经现有学习写队列串行化，执行前/队列实际提交前检查 AbortSignal；已进入 backend durable write 时取消不保证撤销，使用同一 draft 重试取得结果。答案 key 本来存在于模型生成的 tool call arguments，公开 projection 不 echo key；raw session/debug/export 不属于防作弊边界。
 
-Authoring policy 扩展同一 grounding section：用户要求学习计划才 search/read → outline（如缺失）→ initial plan；要求 quiz 才在 outline/plan 就绪后 search/read → quiz。普通问答不授权无关 mutation，Source 中的命令从不授权发布。所有 authoring 只用课程证据/已验证 Concepts，一般知识只能用于明确分区的 QA。禁止 record_attempt、update_mastery、set_correct、raw_sql、source_db_write；本阶段不增加 study_plan_get/quiz_result_get。
+禁止 record_attempt、update_mastery、set_correct、raw_sql、source_db_write；不增加与状态/学生 API 重复的 study_plan_get 或 quiz_result_get。
 
-P5 语义修正：课程资料不足以支持所请求证明时，说明缺失的定义/定理并停止课程证明。一般知识默认只补充简短背景/直觉；只有用户明确请求独立课外证明才展开，必须说明外部假设与定理，不能把未验证或省略关键构造的论证称为严格证明。此规则由既有 grounding section 拥有，不改变七工具或 durable state。
+课程资料不足以支持所请求证明时，说明缺失的定义/定理并停止课程证明。一般知识以独立分区呈现，默认只补充简短背景/直觉；只有用户明确请求独立课外证明才展开，必须说明外部假设与定理，不能把未验证或省略关键构造的论证称为严格证明。
 
 模型输入校验错误提供首个失败字段路径（最长 200 字符）和原因，不返回堆栈或完整输入；例如 `days.0.tasks.0.questionCount`。畸形 chunkIds/evidenceChunkIds 另提示从检索结果原样复制 opaque ID，不截断、计算或生成；publish 参数说明同样明确不使用 bash 修补 ID。不会模糊匹配或自动替换引用，修正后仍经过同课 ownership 校验。任务输入用两个 schema 分支表达：learn/review 不含 questionCount，practice 才可携带 1–20；持久化规则不变。发布后的聊天确认保持简短，学生在 Learning 面板查看结果，课程问答仍必须给出精确引用。
 
@@ -39,5 +48,3 @@ Quiz purpose 按主题描述；只有实际日期与 currentPlan.startsOn 或用
 出题前逐题求解，按最终 options 数组的 0-based 下标核对正确选项文本与 explanation；重排后重算下标。每个引用的 chunk 必须实际读取，outline 内出现 ID 不等于读过正文。Domain 校验仍只负责结构和引用，数学正确性不由 schema 保证。
 
 course_search 的模型说明明确现有 lexical contract：只搜正文，空格词为 AND，CJK 为字面 substring；先用一个短主题，语言/同义词分开调用，空结果先缩短词，不能把 filename 与整句一起当语义检索。
-
-quiz_publish 的 typed canonical value 仍为完整 public quiz，供 UI/PTC 使用；给模型的 output.render 仅包含 projectId/quizId/itemCount/openIn 发布摘要，不再重复题目与 sourceRefs。聊天仅确认题数和面板入口，独立课程问答继续严格 citation。
