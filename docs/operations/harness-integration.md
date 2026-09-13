@@ -25,4 +25,4 @@ DSH_HOME=/tmp/learning-helper-dev pnpm dsh --profile learning-helper --no-open
 
 Host 复用公开 WorkspaceRegistry/Agent session identity、defineTool/systemPrompt、Web connection、LLM/image attachment 服务。无 Workspace scope 生命周期假设：一个 profile plugin 实例按请求解析 Workspace，缓存有限连接。自定义 preset/system prompt 可能遮蔽 section，必须在自己的 composition 中验证。
 
-最终发行使用 prebuilt tgz 与 exact remote SHA，部署所有权见 [运行壳](https://github.com/Develata/learning-helper/tree/master/deploy/learning-helper)。旧数据不会在启动时自动迁移，参见 [migration](migration-v1.md)。
+最终发行使用 prebuilt tgz 与 exact remote SHA，部署所有权见 [运行壳](https://github.com/Develata/learning-helper/tree/feat/workspace-v02/deploy/learning-helper)。旧数据不会在启动时自动迁移，参见 [migration](migration-v1.md)。

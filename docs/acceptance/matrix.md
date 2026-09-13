@@ -14,16 +14,17 @@
 | original page tool bounds | verified | pdf-pipeline：非PDF/未知source/错误页/超4页拒绝；workspace tools作用域 |
 | separate parsing/assetization state | verified | pdf-pipeline：local可用时仍标解析中；MinerU不能与未结束视觉解析竞争，取消保留local |
 | MinerU official protocol2 adapter | verified | fake HTTP：health、task、poll、result、lost/failed/timeout、未知提交不自动重发 |
-| atomic generation / old citation / quotas | verified | generations、MinerU：active-only search / historical read；失败派生预留与第11次拒绝 |
+| atomic generation / old citation / quotas | verified | generations、MinerU：active-only search / historical read；失败派生预留与第11次拒绝；已失败MinerU重启不改Source快照 |
 | explicit v1 migration / original untouched | verified | migration：完整已评分fixture、概念/计划/练习/citations相同、重复幂等、原库hash不变 |
 | native student UI / quiz / Weak→v2 | verified | packed Chromium：初始化/上传/工具卡片/键盘作答/丢包重试/刷新/错误恢复 |
 | safe cards / pre-submit keys absent | verified | student/client + Chromium public payload/DOM/quiz_publish card |
 | task sessions / draft / retry | verified | client task tests + packed Chromium：继承Workspace/model、自动发送、原草稿、继续不重发 |
 | long Chinese / final visual / soft-warning UI | verified | Chromium 1440/1024/390 light/dark截图；100条source投影；checkbox尺寸断言与PDF错误状态 |
-| actual Harness LLM workspace QA / PDF | verified | newapi/gpt-5.6-luna实际search/read和准确citation；最终全场景复核仍在进行 |
+| actual Harness LLM workspace QA / PDF | verified | newapi/gpt-5.6-luna实际search/read和准确citation；六场景程序检查与数学语义复核通过 |
 | actual Harness outline/plan/quiz v0.2 | verified | newapi/gpt-5.6-luna：真实publish；六场景程序检查加authoring回执修复后语义复核 |
 | actual multimodal / real MinerU | blocked | 当前 newapi/gpt-5.6-luna 的公开 inputModalities 未声明 image；未配置官方 MinerU 服务 |
-| standalone / final full regression | verified | 无sibling的新副本 frozen install/typecheck/145 tests/build/pack；本地5个demo和packed restart |
-| v0.2 Docker cold boot/restart | planned | 仍需新的exact plugin SHA与独立volume验证；不替换用户v0.1实例 |
+| standalone / final full regression | verified | 无sibling的新副本 frozen install/typecheck/146 tests/build/pack；本地5个demo和packed restart |
+| v0.2 Docker cold boot/restart | verified | aad1263无缓存构建、新volume、真实Chromium、认证/Origin与重启快照一致；最终包184运行文件相同，CURRENT区分文档pin与构建输入 |
+| dependency scope review | verified | plugin production audit0；实际Docker runtime24条固定upstream风险，见COMPATIBILITY；不声称全部不可达 |
 | no Harness runtime patch | verified | upstream c291e796 对 packages/apps 0 diff |
 | vector/PKM/FSRS/multi-user/source deletion | deferred | 不在本轮范围 |

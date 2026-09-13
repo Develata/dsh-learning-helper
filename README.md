@@ -39,16 +39,16 @@ v0.1 的真实 Harness 浏览器截图；课程与答题数据来自确定性演
 
 ## 快速开始
 
-运行壳与部署文件在 [Develata/learning-helper](https://github.com/Develata/learning-helper)：
+v0.2 目前保留在 `feat/workspace-v02` 分支，尚未发布 tag；默认分支与 `v0.1.0` 仍用于已发布版本。运行壳与部署文件在 [Develata/learning-helper](https://github.com/Develata/learning-helper)：
 
 ```bash
-git clone https://github.com/Develata/learning-helper.git
+git clone --branch feat/workspace-v02 https://github.com/Develata/learning-helper.git
 cd learning-helper/deploy/learning-helper
 docker compose up --build -d
 docker compose exec learning-helper node /opt/learning-helper/open.mjs
 ```
 
-打开最后一条命令返回的本机登录地址，在 Harness 模型设置中配置 provider，选择/创建本地 Workspace，随后打开“学习”面板。凭证只在运行时配置，不进入 Git、Dockerfile 或聊天。版本锁、持久化与故障处置见 [部署说明](https://github.com/Develata/learning-helper/blob/master/deploy/learning-helper/README.md)。源码方式见 [本地运行](docs/operations/local-dev.md) / [Harness 集成](docs/operations/harness-integration.md)。
+打开最后一条命令返回的本机登录地址，在 Harness 模型设置中配置 provider，选择/创建本地 Workspace，随后打开“学习”面板。凭证只在运行时配置，不进入 Git、Dockerfile 或聊天。版本锁、持久化与故障处置见 [部署说明](https://github.com/Develata/learning-helper/blob/feat/workspace-v02/deploy/learning-helper/README.md)。源码方式见 [本地运行](docs/operations/local-dev.md) / [Harness 集成](docs/operations/harness-integration.md)。
 
 ## 原创贡献与复用
 
@@ -89,6 +89,6 @@ v0.2 改为 Workspace 本地存储；旧全局 Course 数据不自动迁移。�
 
 本地单用户/单Host；不支持NFS/SMB或云盘同步SQLite。PDF单文件64MiB，Workspace200份资料、100份提醒；视觉最多64页/次，原件查看1–4页。MinerU是可选外部服务，需要官方自托管protocol2；不内置Python/OCR模型，不声称兼容SaaS v4。模型和外部Provider的真实验收见CURRENT，普通tests只使用fake provider。
 
-引用/结构校验不等于数学正确性证明。未提供多用户、外部PKM、FSRS或向量服务。普通学生界面/工具卡片提交前隐藏答案，原始session/debug/export可能保留Agent作者参数，不是考试防作弊边界。固定Harness的传递依赖风险见[v0.1发布审查](docs/acceptance/final-delivery.md)；不支持公网共享部署。
+引用/结构校验不等于数学正确性证明。未提供多用户、外部PKM、FSRS或向量服务。普通学生界面/工具卡片提交前隐藏答案，原始session/debug/export可能保留Agent作者参数，不是考试防作弊边界。固定Harness的当前传递依赖复核见[兼容性与风险边界](COMPATIBILITY.md)；不支持公网共享部署。
 
 业务仓库：[dsh-learning-helper](https://github.com/Develata/dsh-learning-helper)；thin fork：[learning-helper](https://github.com/Develata/learning-helper)。[MIT](LICENSE) · [第三方说明](THIRD_PARTY_NOTICES.md) · [Docs control plane](docs/README.md)。

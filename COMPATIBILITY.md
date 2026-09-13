@@ -9,3 +9,5 @@ Client 使用公开 dsh.client/./client/native sidebar/slots、ISessions/IWorksp
 MinerU adapter 对接官方自托管 protocol 2，参考 upstream 4fe4bde114a23ee5dd637eae99b767f4669bf58c；不声称兼容 SaaS v4或任意wrapper。视觉取决于运行中 Session 选定模型的公开 image capability。当前验证结果和未运行项见 [CURRENT](docs/CURRENT.md)。
 
 默认 runtime diff gate 要求 fork packages/apps 相对上述 SHA 为0。已有独立 branding分支 allowlist留作旧功能兼容，v0.2开发不合入。Docker lock中的harnessForkSha是实际build-input提交，非包含lock文件的自引用提交；最终运行壳metadata pin最终remote pluginSHA。v0.1 tag不修改。
+
+依赖复核（2026-09-13）：插件 `pnpm audit --prod` 为0；从本轮实际Docker runtime提取manifest/lock审计仍为24条（11 high、12 moderate、1 low、0 critical），分类为固定upstream传递风险，不擅自升级。v0.2新增PDF与图片处理，不能沿用v0.1“TXT路径不调用图片解析”的适用性结论；PDF.js Worker、页/字节/输出配额限制资源消耗，但不等于修复整个Harness的漏洞或形成完整沙箱。仍限本机单用户、loopback认证部署；未做全runtime exploit验证。原始结果在本机artifacts/v02-runtime-audit.json。
