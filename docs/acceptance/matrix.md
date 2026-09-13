@@ -20,14 +20,14 @@
 | native student UI / quiz / Weak→v2 | verified | packed Chromium：初始化/上传/工具卡片/键盘作答/丢包重试/刷新/错误恢复 |
 | safe cards / pre-submit keys absent | verified | student/client + Chromium public payload/DOM/quiz_publish card；真实workspace ToolRuntime精简plan回执及浏览器3天/每日60分钟，旧plan回放兼容 |
 | learning math / Markdown display | verified | math-browser-checks + packed Chromium：四种公式分隔符、真实 KaTeX 字体、公式选项点击、提交后解析/知识点/工具卡、错误 TeX 与 HTML/URL 回退；1440/1024/390 light/dark，长公式可滚动且计划不撑宽 |
-| task sessions / draft / retry | verified | client task tests + packed Chromium：继承Workspace/model、自动发送、原草稿、继续不重发 |
+| task sessions / draft / retry | verified | client task tests + packed Chromium：继承Workspace/model、自动发送、原草稿、继续不重发；task-session-port回归覆盖创建回执先于Workspace follow、取消/超时释放订阅和迟到导航 |
 | long Chinese / final visual / soft-warning UI | verified | Chromium 1440/1024/390 light/dark截图；100条source投影；checkbox尺寸断言与PDF错误状态 |
 | actual Harness LLM workspace QA / PDF | verified | 2026-09-13 newapi/gpt-5.6-luna实际search/read和准确citation；六场景与后续authoring回执的各自语义范围见 [golden path](golden-path.md#真实模型语义验收) |
 | actual Harness outline/plan/quiz v0.2 | verified | 同日真实publish；计划口述不一致修复后，单独plan/quiz复验通过；不是最新checkout重新运行全场景 |
 | actual multimodal / real MinerU | blocked | 最近外部验收时模型未声明 image、未配置官方 MinerU；本轮未重查运行环境或重跑服务 |
-| standalone / final full regression | verified | 无sibling的新副本 frozen install/typecheck/151 tests/build/pack；本地5个demo和packed restart |
+| standalone / final full regression | verified | 无sibling的新副本 frozen install/typecheck/156 tests/build/pack；本地5个demo和packed restart |
 | Docker cold boot/restart at aad1263 | verified | 已保存的no-cache/new-volume/Chromium/auth/restart回执；与此前a0fa0c6运行文件等价，不覆盖后续本地修复 |
-| Docker with current published runtime fixes | planned | 源码已推送并同步发行pin，本批次未重建镜像；不得用历史Docker PASS代替 |
+| Docker with current published runtime fixes | planned | 68ba236 build/health通过，Chromium暴露任务会话follow竞态；修复后packed通过，完整Docker复验待运行 |
 | v0.2 screenshots / captioned video | verified | 真实 packed Chromium、四张PNG、115秒H.264全片解码；作者draft为fixture，说明与入口见 [DEMO](../DEMO.md#仓库演示素材) |
 | dependency scope review | verified | plugin production audit0；实际Docker runtime24条固定upstream风险，见COMPATIBILITY；不声称全部不可达 |
 | no Harness runtime patch | verified | upstream c291e796 对 packages/apps 0 diff |

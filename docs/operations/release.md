@@ -22,6 +22,8 @@ GHCR 发布由运行壳仓库的 GITHUB_TOKEN 完成，需要该 job 的 package
 
 ## 失败与重试
 
+如果 tag 已存在但 Actions API 的 workflow_runs 仍为0，先核对 tag 对应提交中的 workflow、Actions enabled、tag过滤和推送凭据类型，再查看 Actions 页面限制提示。没有 run 就没有可重跑的 job；保留原 tag，记录时间与 GitHub request ID 供 GitHub 支持排查，不删除重推 tag 或把本地 PASS 当作 Release 成功。后续实际源码修复使用新的补丁版本。
+
 插件发布完成后再 push 运行壳 tag，不能依靠两个独立 workflow 的启动顺序。发布 job 失败时重跑失败 job，可复用同次 run 的已测试 artifact；超过其保留期须重跑完整 workflow。已发布 Release 不覆盖；修正源码/版本锁时发布新的补丁版本与新 tag，禁止移动已存在 tag。镜像 push 和 GitHub Release 不是跨系统事务，前者成功后后者失败会留下镜像，应重试同一次发布并核对 digest，不能当成完整成功。
 
 拉取失败先核对 Actions 与 Release 是否完成，再检查 package visibility/login；无镜像不得退回 latest。容器使用 loopback Host/Origin/cookie 认证和持久化 volume；[README](../../README.md#快速开始) 的 Compose 无 build 字段，运行时不 install/clone/update。升级 v0.1 先执行 [显式迁移](migration-v1.md)。

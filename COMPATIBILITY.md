@@ -1,6 +1,6 @@
 # Compatibility
 
-v0.2.0 固定 DeepSeek Harness **0.1.5-rc.2** / upstream **c291e7961a515f6d7af9304e7fd1d257929aef26**；Node **24.18.0**、pnpm **11.7.0**。不承诺 latest。v0.1.0 验收是 [独立历史记录](docs/acceptance/final-delivery.md)，升级需要显式 [migration](docs/operations/migration-v1.md)。
+v0.2.1 固定 DeepSeek Harness **0.1.5-rc.2** / upstream **c291e7961a515f6d7af9304e7fd1d257929aef26**；Node **24.18.0**、pnpm **11.7.0**。不承诺 latest。v0.1.0 验收是 [独立历史记录](docs/acceptance/final-delivery.md)，升级需要显式 [migration](docs/operations/migration-v1.md)。
 
 Host 使用公开 Cordis、WorkspaceRegistry、Agent/session、LLM/image attachment、Web/Connection、defineTool、systemPrompt contract。运行时 Learning state 与 evidence 使用 Workspace-local node:sqlite，不依赖 storage-sqlite 私有实现；旧 storage-domain 依赖保留给迁移和回归。
 

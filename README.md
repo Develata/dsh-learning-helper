@@ -50,18 +50,18 @@ flowchart LR
 
 ## 快速开始
 
-v0.2.0 使用两个仓库的同名 tag 发布；默认分支和 v0.1.0 保持原有版本。发布成功后可直接拉取 **linux/amd64** 镜像，无需本机构建或安装 Node/pnpm：
+v0.2.1 使用两个仓库的同名 tag 发布；默认分支和 v0.1.0 保持原有版本。发布成功后可直接拉取 **linux/amd64** 镜像，无需本机构建或安装 Node/pnpm：
 
 ```bash
-docker pull ghcr.io/develata/learning-helper:0.2.0
+docker pull ghcr.io/develata/learning-helper:0.2.1
 ```
 
-推荐下载 [运行壳 Release](https://github.com/Develata/learning-helper/releases/tag/v0.2.0) 附带的 Compose，它固定到验收镜像的 SHA-256 digest，并保留 `/data`、Workspace 和 `127.0.0.1:3010`：
+推荐下载 [运行壳 Release](https://github.com/Develata/learning-helper/releases/tag/v0.2.1) 附带的 Compose，它固定到验收镜像的 SHA-256 digest，并保留 `/data`、Workspace 和 `127.0.0.1:3010`：
 
 ```bash
 mkdir learning-helper-deploy
 cd learning-helper-deploy
-curl -fL https://github.com/Develata/learning-helper/releases/download/v0.2.0/compose.yml -o compose.yml
+curl -fL https://github.com/Develata/learning-helper/releases/download/v0.2.1/compose.yml -o compose.yml
 docker compose pull
 docker compose up -d
 docker compose exec learning-helper node /opt/learning-helper/open.mjs
