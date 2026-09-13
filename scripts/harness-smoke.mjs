@@ -123,10 +123,15 @@ try {
     const restored = await read.json(); assert.equal(read.status, 200, JSON.stringify(restored)); assert.equal(restored.isError, false, JSON.stringify(restored)); assert.deepEqual(restored.value, evidence);
     receipts.push('actual standard-preset Agent scope, A/B isolation, removed courseId and process restart citation persistence');
     if (process.env.LH_BROWSER_SMOKE !== '0') {
-      browserReceipt = await browserSmoke({ web: second, harness, plugin, work, screenshotsPath: process.env.LH_BROWSER_SCREENSHOTS });
+      const options = { web: second, harness, plugin, work, screenshotsPath: process.env.LH_BROWSER_SCREENSHOTS };
+      browserReceipt = process.env.LH_DEMO_OUTPUT
+        ? await (await import('./record-demo.mjs')).recordDemo({ ...options, output: resolve(process.env.LH_DEMO_OUTPUT) })
+        : await browserSmoke(options);
       before = await (await second.get(path(browserReceipt.sessionId) + '/dashboard')).json();
       assert.equal(before.currentPlan.version, 2);
-      receipts.push('Chromium: workspace initialization, MD/PDF upload, grounded authoring, quiz retry, Weak/v2, task sessions, workspace switch');
+      receipts.push(process.env.LH_DEMO_OUTPUT
+        ? 'Chromium recording: workspace initialization, MD/PDF upload, fixture tool authoring, mathematical quiz, Weak/v2 and refresh'
+        : 'Chromium: workspace initialization, MD/PDF upload, grounded authoring, quiz retry, Weak/v2, task sessions, workspace switch');
     }
   } finally { await second.close(); }
   if (browserReceipt) {
