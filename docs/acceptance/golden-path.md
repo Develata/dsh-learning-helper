@@ -30,5 +30,6 @@ P4 Golden Browser Path（确定性 authoring + 实际浏览器已验证）：
 5. 键盘/鼠标作答，故意错两题一致连续；先模拟失败，再模拟 Host 提交成功但响应丢失，重试始终使用同一 submissionId/answers，仍只有五条 Attempt。
 6. 看到 3/5 与逐题讲解、Weak、v2，以及 Why changed 的两条证据、20 分钟复习/3 题。刷新页面后通过 Host 恢复反馈/当前计划。
 7. 模拟 source/dashboard 失败和旧课程延迟响应，验证 retry/隔离。1440、1024（原生手动全屏）、390（原生自动全屏）检查截图、light/dark、长概念名、横向溢出与页面异常。
+8. 计划任务点击“新会话”→ 独立 Harness 会话自动收到当前任务请求，继承当前模型；原聊天草稿保留。重开学习面板/刷新后继续该会话不重发；同任务再建会话，模拟发送成功但响应丢失，刷新后使用相同 requestId 重试且只有一条实际 user message。展开任务的多个会话入口。模型回复使用 keyless fixture，只证明正式 Agent admission/导航路径，不冒充真实模型教学语义。
 
 证据：tests/student.test.ts、tests/client、scripts/browser-smoke.mjs，由 test:integration 默认执行。artifacts/browser 保存最近运行状态与本地截图，不入 Git。中等宽度下 Harness 默认三栏会压缩聊天，可用其原生全屏或收起左栏；插件提示全屏，不接管全局布局。Quiz 当前以普通文本显示，长篇数学讲解仍交给 Harness chat renderer；citation deep-link 非本阶段验收项。

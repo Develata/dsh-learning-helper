@@ -37,3 +37,4 @@
 | Client 失败与取消 | verified | 创建明确拒绝后可编辑；source/dashboard/submit 失败可重试；旧课程延迟响应不污染新课程；12 秒 timeout/abort model tests | 恢复 |
 | 视觉与响应式 | verified | 1440/1024/390 截图人工自审、light/dark、长中英文知识点无横向溢出；1024 使用原生全屏，390 自动全屏 | 学生体验 |
 | pinned Docker delivery | verified | 固定 SHA/image digest；无缓存 build、新 volume、Chromium、restart/auth/Origin；最终 pin 见 fork 发行记录 | cold boot |
+| 计划任务独立会话（本地开发版） | verified | tests/client/task-session*.test.ts；packed Chromium：模型/workspace 继承、自动发送、原草稿保留、同任务多会话、刷新继续不重发、真实 Host 已接收但响应丢失后同 requestId 重试 | 从计划开始学习 |

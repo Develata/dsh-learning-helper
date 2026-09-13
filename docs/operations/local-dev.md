@@ -31,3 +31,5 @@ P4 使用同一 package 的 TSX client：build 产生 Host dist/index.js、类�
 浏览器验收前，在 Harness 的 apps/web 执行 `pnpm exec playwright install chromium --only-shell` 安装当前锁定 Playwright 对应的 Chromium。然后在插件执行 `pnpm run test:integration -- /absolute/path/to/learning-helper`；默认包含浏览器闭环，`LH_BROWSER_SMOKE=0` 仅用于后端诊断，不满足 P4 验收。截图与 JSON 回执在本地 artifacts/browser，不提交。
 
 学生操作：打开 session → 学习 → 新建课程/上传资料 → 生成计划快捷动作并确认发送 → Agent 发布后点击卡片打开当前计划/练习。没有模型配置时可运行确定性 demos/browser smoke，但不能完成自主 Agent 学习。约 1024px 建议用右上角原生全屏或收起左侧工作区栏；390px 自动全屏。
+
+本地开发版计划任务支持“新会话”自动发送及“继续学习”；需要配置可用模型。任务历史入口是当前浏览器 origin 下的书签，换地址/浏览器或清理站点数据后入口不会同步，实际聊天仍在 Harness 会话列表。查看任务开场请求可直接打开对应会话。标准 `test:integration` 使用隔离状态和无凭证 fixture provider 验证发送/重试，不会调用用户真实模型。

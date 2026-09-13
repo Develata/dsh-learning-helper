@@ -243,11 +243,72 @@ export async function browserSmoke({ web, harness, plugin, work, workspacePath, 
     await page.setViewportSize({ width: 390, height: 1000 });
     await page.screenshot({ path: join(screenshots, 'long-concept-390-light.png'), fullPage: true });
     assert.ok(await panel.evaluate(el => el.scrollWidth <= el.clientWidth + 2));
+    // Task-scoped sessions use the real Harness create/select/prompt path and a keyless
+    // provider fixture. No model network call, no Browser-to-authoring shortcut.
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await panel.getByLabel('当前课程', { exact: true }).selectOption(courseId);
+    await panel.getByRole('heading', { name: '当前计划 · v2', exact: true }).waitFor();
+    assert.equal((await web.post('/learning-helper-test/tools', { action: 'select-task-fixture', sessionId })).status, 200);
+    await page.getByText('learning-task-fixture/task-smoke', { exact: true }).first().waitFor({ state: 'attached' });
+    if (await page.getByRole('button', { name: '退出全屏', exact: true }).count()) await page.getByRole('button', { name: '退出全屏', exact: true }).click();
+    const sourceMenuName = await page.getByRole('treeitem', { selected: true }).getByRole('button', { name: /^会话“/, includeHidden: true }).getAttribute('aria-label');
+    assert.ok(sourceMenuName);
+    const draftText = '保留在原会话中的草稿，请勿发送';
+    await composer.fill(draftText);
+    await panel.getByRole('button', { name: /^新会话：Day 1/ }).first().click();
+    const fixtureReply = '任务会话已收到学习请求（确定性验收回复，不是实际模型教学）。';
+    await page.getByText(fixtureReply, { exact: true }).waitFor();
+    const bookmarks = () => page.evaluate(() => JSON.parse(localStorage.getItem('learning-helper:task-sessions:v1') ?? '[]'));
+    const firstTask = (await bookmarks())[0];
+    assert.equal(firstTask.courseId, courseId); assert.equal(firstTask.phase, 'sent');
+    assert.notEqual(firstTask.sessionId, sessionId); assert.equal(firstTask.seed.model.model, 'task-smoke');
+    assert.ok(firstTask.prompt.includes('阅读课程定义、定理与证明。'));
+    assert.ok(firstTask.prompt.includes('course_search → course_read'));
+    let observed = await (await web.get('/learning-helper-test/tools')).json();
+    assert.deepEqual(observed.sessions.find(s => s.id === firstTask.sessionId).taskPrompts, [firstTask.prompt]);
+    assert.deepEqual(observed.sessions.find(s => s.id === sessionId).taskPrompts, []);
+    assert.ok(observed.modelCalls.some(c => c.provider === 'learning-task-fixture' && c.model === 'task-smoke'));
+    await page.reload({ waitUntil: 'load' });
+    await page.getByRole('button', { name: '打开学习面板', exact: true }).click();
+    await panel.getByRole('button', { name: '继续学习', exact: true }).click();
+    await page.getByText(fixtureReply, { exact: true }).waitFor();
+    observed = await (await web.get('/learning-helper-test/tools')).json();
+    assert.equal(observed.sessions.find(s => s.id === firstTask.sessionId).taskPrompts.length, 1);
+    await page.getByRole('button', { name: '打开学习面板', exact: true }).click();
+    let dropped = false; const requests = [];
+    await page.route('**/api/session/prompt', async route => {
+      requests.push(route.request().postDataJSON());
+      const response = await route.fetch();
+      if (!dropped) { dropped = true; await route.abort('failed'); }
+      else await route.fulfill({ response });
+    });
+    await panel.getByRole('button', { name: /^新会话：Day 1/ }).first().click();
+    await panel.getByRole('alert').waitFor();
+    assert.equal(dropped, true);
+    const retryId = (await bookmarks())[0].sessionId;
+    await page.reload({ waitUntil: 'load' });
+    await page.getByRole('button', { name: '打开学习面板', exact: true }).click();
+    await panel.getByRole('button', { name: '重试开始', exact: true }).click();
+    await page.getByText(fixtureReply, { exact: true }).waitFor();
+    observed = await (await web.get('/learning-helper-test/tools')).json();
+    assert.equal((await bookmarks()).length, 2);
+    assert.equal(observed.sessions.find(s => s.id === retryId).taskPrompts.length, 1);
+    assert.equal(requests.length, 2);
+    assert.deepEqual(requests[0].payload, requests[1].payload);
+    await page.unroute('**/api/session/prompt');
+    await page.getByRole('button', { name: '打开学习面板', exact: true }).click();
+    await panel.getByText('学习会话 · 2', { exact: true }).click();
+    await panel.screenshot({ path: join(screenshots, 'plan-task-sessions.png') });
+    // The original composer draft survives creating and sending in other scopes.
+    const sourceRow = page.getByRole('treeitem').filter({ has: page.getByRole('button', { name: sourceMenuName, exact: true, includeHidden: true }) }).last();
+    // Original title is the workspace fallback; match the actual visible row.
+    await sourceRow.click(); assert.equal(await composer.innerText(), draftText);
     assert.deepEqual(errors, []);
     await writeFile(join(screenshots, 'result.json'), JSON.stringify({ status: 'passed', browser: require('playwright/package.json').version,
       courseId, quizId: published.quiz.id, checks: ['create/upload/dedupe','native slots','composer prefill','real tool dispatch and replay cards',
         ...(branding ? ['Learning Helper title/welcome/manifest/favicon', 'brand slots expanded/collapsed and responsive light/dark'] : []),
-        'pre-submit public payload and DOM key isolation','submit failure and lost-response retry','weak/v2/revision evidence','refresh feedback','dashboard/source failure recovery','course switch cancels stale response','keyboard radios','long Chinese and math concept names','responsive light/dark geometry; native fullscreen at 1024px'],
+        'pre-submit public payload and DOM key isolation','submit failure and lost-response retry','weak/v2/revision evidence','refresh feedback','dashboard/source failure recovery','course switch cancels stale response','keyboard radios','long Chinese and math concept names','responsive light/dark geometry; native fullscreen at 1024px',
+        'task session create and auto-send through real Harness with fixture provider','inherits model selection','task session bookmarks survive refresh','continue does not resend','lost prompt response retries same identity after reload'],
       viewportWidths: [1440,1024,390], pageErrors: errors, semanticLlmRun: false }, null, 2));
   } catch (error) {
     await writeFile(join(screenshots, 'result.json'), JSON.stringify({ status: 'failed', error: String(error), pageErrors: errors }));

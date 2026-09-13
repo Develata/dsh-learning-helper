@@ -9,15 +9,16 @@ import { Loading, Failure } from './common.js';
 import { PlanView, ProgressView } from './plan.js';
 import { QuizView } from './quiz.js';
 import { quickPrompt } from './model.js';
+import type { TaskSessionsProps } from './task-sessions.js';
 const sections: [Section, string][] = [['course', '课程'], ['plan', '计划'], ['progress', '进度'], ['quiz', '练习']];
 function rememberedCourse() { try { return sessionStorage.getItem('learning-helper:selected-course') ?? ''; } catch { return ''; } }
-export function LearningPanel({ navigation, revision, inputActions, inputDraft, fullscreen }: { navigation: Navigation; revision: number; inputActions: InputActions; inputDraft: string; fullscreen: boolean }) {
+export function LearningPanel({ navigation, revision, inputActions, inputDraft, fullscreen, taskSessions, taskState }: { navigation: Navigation; revision: number; inputActions: InputActions; inputDraft: string; fullscreen: boolean } & TaskSessionsProps) {
   const selectorId = useId();
   const [selected, setSelected] = useState(() => navigation.courseId ?? rememberedCourse()); const [creating, setCreating] = useState(false);
   const [reload, setReload] = useState(0);
   const state = useResource(`courses:${reload}`, signal => request<{ courses: Course[] }>('/courses', signal));
   useEffect(() => { if (navigation.courseId) { setSelected(navigation.courseId); setCreating(false); } }, [navigation.courseId, revision]);
-  function select(id: string) { setSelected(id); try { sessionStorage.setItem('learning-helper:selected-course', id); } catch { /* Optional browser preference only. */ } }
+  function select(id: string) { if (id !== selected) taskSessions.cancel(); setSelected(id); try { sessionStorage.setItem('learning-helper:selected-course', id); } catch { /* Optional browser preference only. */ } }
   const courses = state.status === 'success' ? state.data.courses : [];
   // An explicit unknown target must not silently render another course.
   const course = courses.find(c => c.id === selected) ?? (!selected ? courses[0] : undefined);
@@ -29,11 +30,11 @@ export function LearningPanel({ navigation, revision, inputActions, inputDraft, 
         <Button onClick={() => setCreating(true)}>新建课程</Button></div>}
       {creating || !courses.length ? <CreateCourse onCreated={c => { select(c.id); setCreating(false); setReload(n => n + 1); }} cancel={courses.length ? () => setCreating(false) : undefined}/> :
         course ? <CourseWorkspace key={course.id} course={course} navigation={navigation.courseId === course.id ? navigation : {}}
-          revision={revision} inputActions={inputActions} inputDraft={inputDraft}/> : <p className="lh-empty">请选择课程；之前的课程当前不可用。</p>}
+          revision={revision} inputActions={inputActions} inputDraft={inputDraft} taskSessions={taskSessions} taskState={taskState}/> : <p className="lh-empty">请选择课程；之前的课程当前不可用。</p>}
     </>}
   </div>;
 }
-function CourseWorkspace({ course, navigation, revision, inputActions, inputDraft }: { course: Course; navigation: Navigation; revision: number; inputActions: InputActions; inputDraft: string }) {
+function CourseWorkspace({ course, navigation, revision, inputActions, inputDraft, taskSessions, taskState }: { course: Course; navigation: Navigation; revision: number; inputActions: InputActions; inputDraft: string } & TaskSessionsProps) {
   const [section, setSection] = useState<Section>(navigation.section ?? 'plan');
   const [quizId, setQuizId] = useState(navigation.quizId ?? ''); const [refresh, setRefresh] = useState(0); const [notice, setNotice] = useState('');
   useEffect(() => { if (!inputDraft.trim()) setNotice(''); }, [inputDraft]);
@@ -58,10 +59,10 @@ function CourseWorkspace({ course, navigation, revision, inputActions, inputDraf
     {course.status === 'active' && <div className="lh-agent-actions">
       <Button variant="outline" disabled={!sources.some(s => s.status === 'ready')} onClick={() => ask(data.currentPlan ? 'quiz' : 'plan')}>{data.currentPlan ? '让 Agent 生成 5 题练习' : '让 Agent 生成 3 天计划'}</Button>
       {data.concepts.some(c => c.status === 'weak') && <Button onClick={() => ask('review')}>复习薄弱点</Button>}
-      <p className="lh-muted">快捷动作会填入聊天框，由你确认发送。</p>{notice && <p role="status">{notice}</p>}
+      <p className="lh-muted">上方快捷动作填入当前聊天框，确认后发送。计划任务中的“新会话”会直接开始学习。</p>{notice && <p role="status">{notice}</p>}
     </div>}
     {section === 'course' && <Sources courseId={course.id} sources={sources} reload={() => setRefresh(n => n + 1)}/>}
-    {section === 'plan' && <PlanView data={data}/>}
+    {section === 'plan' && <PlanView data={data} taskSessions={taskSessions} taskState={taskState}/>}
     {section === 'progress' && <ProgressView data={data}/>}
     {section === 'quiz' && (quizId ? <QuizView key={quizId} courseId={course.id} quizId={quizId} concepts={data.concepts}
       back={() => setQuizId('')} onSubmitted={() => setRefresh(n => n + 1)}/> : <section aria-label="练习列表"><h2>练习与回顾</h2>

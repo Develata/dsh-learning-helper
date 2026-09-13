@@ -76,3 +76,8 @@
 
 .lh-compact-hint { display: none; }
 @media (min-width: 768px) and (max-width: 1200px) { .lh-compact-hint { display: block; } }
+.lh-panel .lh-task-session-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.lh-panel .lh-task-history { margin-top: 10px; }
+.lh-panel .lh-task-history summary { cursor: pointer; min-height: 32px; }
+.lh-panel .lh-task-history ol { margin: 8px 0 0; padding: 0; list-style: none; }
+.lh-panel .lh-task-history li { border: 0; padding: 4px 0; margin: 0; }

@@ -30,6 +30,7 @@ flowchart LR
 - 创建/选择课程，上传 TXT/Markdown，查看就绪状态与去重结果。
 - Agent 用七个有边界的工具完成检索、阅读、grounded outline/plan/quiz；引用包含真实讲义段落与行号。
 - Harness 原生 Learning 面板：计划、进度、交互 MCQ、提交后解释与刷新恢复。
+- 当前开发分支：按计划任务新建学习会话，自动发送带课程目标的开场请求；支持继续学习及展开多个会话。此项尚未进入已发布的 v0.1.0 镜像。
 - 确定性评分、Attempt/ConceptState/ReviewQueue、可解释的 PlanRevision；双击与丢失响应重试不重复记账。
 
 功能证明与最终模型/部署验收分别记录在 [验收矩阵](docs/acceptance/matrix.md) 和 [当前状态](docs/CURRENT.md)。普通自动测试不调用外部模型。

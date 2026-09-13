@@ -9,3 +9,5 @@ v0.1 交付范围：课程创建；Markdown/TXT 资料导入；引用式 QA；3 
 P5 feature freeze：PDF/MinerU/OpenFile、模拟测验、简答题、FSRS、Anki、Obsidian、NotebookLM、DeepTutor、向量搜索均 deferred。v0.1 是本机单用户学习助手，沿用 Harness 浏览器认证；不提供多用户、教师/家长后台、社交、音视频教师、默认多 Agent、复杂知识追踪、通知/cron、用户删除 Source（避免引用悬空）。
 
 首个 Demo 是 3-Day Adaptive Study Loop：Day 1 一致连续两次答错，Day 2 加入 20 分钟定向复习和 3 题练习，显示错误证据与计划差异。路径由 [golden-path](acceptance/golden-path.md) 定义；fixtures 仅证明业务逻辑，不能替代真实 Agent orchestration。
+
+体验反馈授权的开发增量：学生从计划任务进入独立学习会话，一个任务可保留多个会话。新建即发送该任务的学习请求，继续已有会话不重发；进入会话不等于完成任务。当前为本地开发状态，发布/运行情况由 CURRENT 拥有。

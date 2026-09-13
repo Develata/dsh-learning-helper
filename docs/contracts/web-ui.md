@@ -6,7 +6,13 @@ Host 路由前缀 `/learning-helper/v1`：GET `/health`；GET `/courses/:courseI
 
 每条路由先经公开 `ctx.connection.requestRejection(req)` 校验 Harness 浏览器会话与 Host/Origin；未认证返回 401/unauthorized，来源拒绝返回 403/forbidden。插件不实现独立认证。普通 JSON body 最多 64 KiB，读取最多 10 秒；POST 要求 application/json。提交时间与学习日由 Host 时钟决定，客户端无法提供 correct/mastery。
 
-P4 Client：原生 right sidebar page-type Learning panel，header.actions 提供入口；空会话没有 header 时由 input.left 提供同一入口，不占 corner。课程设置、Plan、Progress、Quiz 共用选中课程；不建立 Session↔Course durable mapping。上传仅 Markdown/TXT（前端 512 KiB 预检，Host 最终验证）。Agent 快捷动作通过 session slot 的 inputActions.setDraft 预填 composer，学生确认发送；Browser 不调用 authoring publish。
+Client：原生 right sidebar page-type Learning panel，header.actions 提供入口；空会话没有 header 时由 input.left 提供同一入口，不占 corner。课程设置、Plan、Progress、Quiz 共用选中课程。上传仅 Markdown/TXT（前端 512 KiB 预检，Host 最终验证）。生成计划/练习等上方快捷动作通过 session slot 的 inputActions.setDraft 预填 composer，学生确认发送；Browser 不调用 authoring publish。
+
+计划任务会话（体验反馈授权）：一个 task 可关联多个 Harness 普通会话。“新会话”是明确的发送操作：从 AI 已生成的 task.reason、conceptIds、type、时间预算组成开场请求，先读学习状态及课程资料，再开始学习/复习/发布练习。没有额外的隐藏 LLM 调用；开场模板与不可信计划数据分隔，不伪称整个模板由模型撰写。新会话沿用点击时的 workspace/cwd、Agent preset 和已选择的模型；未有 session model override 时沿用 Host 默认。不覆盖原会话 composer 草稿。“继续学习”只导航，不重复发送，不把进入会话视作完成任务或掌握度变化。
+
+会话内容由 Harness 持久化；插件只在同源 localStorage 的 `learning-helper:task-sessions:v1` 保存 `{courseId,planId,taskId,sessionId,requestId,title,prompt,createdAt,seed,phase}` 书签。按 course/plan/task 精确筛选；同一 plan 的 v2 保留已有 taskId 的会话。书签最多 100 个、单 prompt 16,000 字符、总读取 2,000,000 字符；满额或存储失败明确拒绝新建，不删除聊天。清除浏览器数据/更换浏览器或 origin 会丢失入口，Harness 会话仍可从会话列表找回；不新增 LearningAggregate 或 Evidence DB 字段。
+
+会话创建与发送是两步，先保存稳定 sessionId/requestId 和冻结 prompt，再调用公开 sessions.create → preset/model selection → SessionFace.prompt → sessions.open/layout。`created → prepared → sent` 记录准备/发送确认；每次操作最多 30 秒、单 client 串行，超时不自动重试，迟到结果不能继续发送或导航。创建/发送响应丢失后“重试开始”复用身份；准备完毕不重新配置已开始的会话。发送确认后导航失败仍保留 sent；普通打开不发送。等待期间其他导航优先；未确认请求可通过“进入会话”检查模型和已有消息。浏览器书签不是跨设备课程会话真值或同步服务。
 
 Student projection：GET `/courses/:courseId/dashboard` 返回 course、concepts（id/name/prerequisiteIds/status/evidenceCount）、currentPlan、recentPlanRevision、recentRevisionTasks（该次修订新增的 day/task）、recentRevisionEvidence（真实错误 Attempt 的题目/所选选项/概念）与 quiz summaries。GET `/courses/:courseId/quizzes` 返回 `{quizzes}`，仅 id/purpose/createdAt/itemCount/submitted/submittedAt/correctCount。GET `/courses/:courseId/quizzes/:quizId/result` 返回 `{result:null}`（存在但未提交）或提交后逐题 selectedOption/correct/correctOption/explanation 与正确题数；未知课程/quiz 为 404。这些是从一个已提交 snapshot 派生的 read model，不改变 durable schema，不读 Evidence DB。
 
