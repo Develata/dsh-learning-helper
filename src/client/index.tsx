@@ -9,6 +9,8 @@ import { Button } from '@deepseek-ai/dsh-client-ui-primitives';
 import { LearningPanel } from './panel.js';
 import { LearningToolCard } from './tool-views.js';
 import { learningToolNames } from './tool-model.js';
+import type { ISessions } from '@deepseek-ai/dsh-api-session-controller/client';
+import type { IWorkspaces } from '@deepseek-ai/dsh-api-workspace-controller/client';
 import type { Navigation } from './types.js';
 import css from './styles.css';
 import { registerLearningBrand } from './brand.js';
@@ -19,12 +21,15 @@ const TAB = 'learning-helper';
 declare module '@deepseek-ai/dsh-client-ui-sidebar-right/client' {
   interface SidebarRightTabParamsMap { 'learning-helper': Navigation }
 }
-interface TaskSessionsInjected { taskSessions: TaskSessions; hooks: { taskSessions: TaskSessions['store'] } }
-function PanelSeat({ useTabInfo, inputActions, useInput, taskSessions, useTaskSessions }: PropsRuntime<'sidebar.right.pane.tab'> & InjectFace<TaskSessionsInjected>) {
+interface TaskSessionsInjected { taskSessions: TaskSessions; hooks: { taskSessions: TaskSessions['store']; sessionList: ISessions['list']; workspaceList: IWorkspaces['list'] } }
+function PanelSeat({ useTabInfo, inputActions, useInput, taskSessions, useTaskSessions, useSessionList, useWorkspaceList }: PropsRuntime<'sidebar.right.pane.tab'> & InjectFace<TaskSessionsInjected>) {
   const { tab, sidebar } = useTabInfo();
   const draft = useInput((s: InputState) => s.draft);
   const taskState = useTaskSessions(s => s);
-  return tab.visible ? <LearningPanel key={tab.navigation.revision} navigation={(tab.navigation.params ?? {}) as Navigation} revision={tab.navigation.revision}
+  const current = useSessionList(s => s.current);
+  const registered = useWorkspaceList(s => !!current && s.items.some(w => w.sessionIds.includes(current)));
+  const sessionId = registered && current ? current : null;
+  return tab.visible ? <LearningPanel key={`${sessionId}:${tab.navigation.revision}`} sessionId={sessionId} navigation={(tab.navigation.params ?? {}) as Navigation} revision={tab.navigation.revision}
     inputActions={inputActions} inputDraft={draft} fullscreen={sidebar.fullscreen} taskSessions={taskSessions} taskState={taskState}/> : null;
 }
 /** One native client plugin; every registration/style owns a Cordis disposer. */
@@ -47,7 +52,7 @@ export function apply(ctx: Context): void {
       return blank && !active ? <Button aria-label="打开学习面板" onClick={() => ctx.sidebarRight.openTab(TAB)}>学习</Button> : null;
     })));
   ctx.effect(() => ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register({ name: 'sidebar.right.pane.tab', key: TAB,
-    inject: (): TaskSessionsInjected => ({ taskSessions, hooks: { taskSessions: taskSessions.store } }),
+    inject: (): TaskSessionsInjected => ({ taskSessions, hooks: { taskSessions: taskSessions.store, sessionList: (ctx.get('sessions') as unknown as ISessions).list, workspaceList: (ctx.get('workspaces') as IWorkspaces).list } }),
   }, PanelSeat)));
   for (const name of learningToolNames) ctx.effect(() => ctx.slots.inject('tool.call.toolview', () => ctx.slots.register({
     name: 'tool.call.toolview', key: name,

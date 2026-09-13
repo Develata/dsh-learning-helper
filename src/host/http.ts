@@ -5,11 +5,11 @@ import type { EvidenceService } from '../services/evidence.js';
 import { EVIDENCE_LIMITS } from '../domain/evidence.js';
 
 const PREFIX = '/learning-helper/v1';
-function send(res: ServerResponse, status: number, body: unknown): void {
+export function send(res: ServerResponse, status: number, body: unknown): void {
   res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
   res.end(JSON.stringify(body));
 }
-async function readBody(req: IncomingMessage, maxBytes = 65_536): Promise<unknown> {
+export async function readBody(req: IncomingMessage, maxBytes = 65_536): Promise<unknown> {
   if (req.headers['content-type']?.split(';')[0]?.trim() !== 'application/json') throw new LearningError('invalid-input', 'Use application/json');
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = []; let size = 0;

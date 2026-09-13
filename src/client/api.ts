@@ -1,4 +1,4 @@
-const ROOT = '/learning-helper/v1';
+const ROOT = '/learning-helper/v2';
 const messages: Record<string, string> = {
   unauthorized: '会话已过期，请重新打开 Harness 登录链接。', forbidden: '当前浏览器来源未获允许，请从 Harness 页面打开。',
   'not-found': '课程或练习不存在，请刷新后重试。', conflict: '内容状态已变化，请刷新检查；已提交的练习不能再次作答。',
@@ -7,8 +7,8 @@ const messages: Record<string, string> = {
 };
 export class RequestError extends Error { constructor(readonly code: string) { super(messages[code] ?? '网络请求未完成，请重试。'); } }
 /** Same-origin cookie carrier only; no launch token or Host stack enters UI state. */
-export async function request<T>(path: string, signal: AbortSignal, body?: unknown): Promise<T> {
-  if (!path.startsWith('/courses')) throw new Error('Unsupported Learning API path');
+export async function request<T>(path: string, signal: AbortSignal, body?: unknown, binary = false): Promise<T> {
+  if (!/^\/sessions\/[a-zA-Z0-9_-]{1,80}\//u.test(path)) throw new Error('Unsupported Learning API path');
   const controller = new AbortController();
   const abort = () => controller.abort(signal.reason);
   signal.addEventListener('abort', abort, { once: true });
@@ -17,7 +17,7 @@ export async function request<T>(path: string, signal: AbortSignal, body?: unkno
     signal.throwIfAborted();
     const response = await fetch(ROOT + path, { method: body === undefined ? 'GET' : 'POST',
       credentials: 'same-origin', mode: 'same-origin', cache: 'no-store', signal: controller.signal,
-      ...(body === undefined ? {} : { headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }) });
+      ...(body === undefined ? {} : { headers: { 'content-type': binary ? 'application/pdf' : 'application/json' }, body: binary ? body as Blob : JSON.stringify(body) }) });
     if (!response.ok) {
       const value = await response.json().catch(() => null) as { error?: { code?: string } } | null;
       throw new RequestError(value?.error?.code ?? 'network');
@@ -28,5 +28,5 @@ export async function request<T>(path: string, signal: AbortSignal, body?: unkno
     throw error instanceof RequestError ? error : new RequestError('network');
   } finally { clearTimeout(timer); signal.removeEventListener('abort', abort); }
 }
-export const coursePath = (id: string) => `/courses/${encodeURIComponent(id)}`;
+export const sessionPath = (id: string) => `/sessions/${encodeURIComponent(id)}`;
 export const errorText = (e: unknown) => e instanceof RequestError ? e.message : '操作未完成，请重试。';

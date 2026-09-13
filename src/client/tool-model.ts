@@ -20,14 +20,14 @@ export function toolCardModel(name: LearningToolName, block: ToolCallBlock): Too
     if (!rendered.startsWith(prefix) || rendered.length > 2_000_000) return fallback;
     const value = record(JSON.parse(rendered.slice(prefix.length)));
     if (!value) return fallback;
-    const courseId = id(value.courseId) ?? id(record(value.course)?.id);
-    if (!courseId) return fallback;
+    const projectId = id(value.projectId) ?? id(record(value.project)?.id) ?? id(value.courseId) ?? id(record(value.course)?.id);
+    if (!projectId) return fallback;
     if (name === 'quiz_publish') {
       const quiz = record(value.quiz); const receipt = value.quizId !== undefined;
       const quizId = receipt ? id(value.quizId) : id(quiz?.id);
       const n = receipt ? count(value.itemCount, 20) : Array.isArray(quiz?.items) ? count(quiz.items.length, 20) : undefined;
       if (!quizId || !n) return fallback;
-      return { title: `${n} 题练习已生成`, lines: ['准备好后开始作答，提交后查看讲解。'], navigation: { courseId, quizId, section: 'quiz' }, action: '开始练习' };
+      return { title: `${n} 题练习已生成`, lines: ['准备好后开始作答，提交后查看讲解。'], navigation: { projectId, quizId, section: 'quiz' }, action: '开始练习' };
     }
     if (name === 'study_plan_publish') {
       const plan = record(value.plan); const version = count(plan?.version, 101);
@@ -41,13 +41,13 @@ export function toolCardModel(name: LearningToolName, block: ToolCallBlock): Too
           return [taskLabel({ type, estimatedMinutes: minutes, ...(questions ? { questionCount: questions } : {}) })];
         });
         return `Day ${index + 1} · ${descriptions.join(' · ')}`;
-      }), navigation: { courseId, section: 'plan' }, action: '查看当前计划' };
+      }), navigation: { projectId, section: 'plan' }, action: '查看当前计划' };
     }
     const concepts = Array.isArray(value.concepts) ? value.concepts.slice(0, 100).map(record).filter(c => c !== null) : [];
-    if (name === 'course_outline_publish') return { title: `课程结构已建立 · ${concepts.length} 个知识点`, lines: concepts.map(c => text(c.name)), navigation: { courseId, section: 'progress' }, action: '查看知识点' };
+    if (name === 'course_outline_publish') return { title: `课程结构已建立 · ${concepts.length} 个知识点`, lines: concepts.map(c => text(c.name)), navigation: { projectId, section: 'progress' }, action: '查看知识点' };
     const states = Array.isArray(value.conceptStates) ? value.conceptStates : [];
     const weak = states.map(record).filter(s => s?.status === 'weak').map(s => text(concepts.find(c => c.id === s?.conceptId)?.name));
     const version = count(record(value.currentPlan)?.version, 101);
-    return { title: '学习状态已读取', lines: [version ? `读取时计划 · v${version}` : '尚未建立计划', weak.length ? `薄弱：${weak.join('、')}` : '当前没有薄弱知识点'], navigation: { courseId, section: 'progress' }, action: '打开学习面板' };
+    return { title: '学习状态已读取', lines: [version ? `读取时计划 · v${version}` : '尚未建立计划', weak.length ? `薄弱：${weak.join('、')}` : '当前没有薄弱知识点'], navigation: { projectId, section: 'progress' }, action: '打开学习面板' };
   } catch { return fallback; /* Unknown historical result stays a safe card, never raw JSON. */ }
 }

@@ -1,15 +1,4 @@
 - insert:
-    - id: learning-helper-sqlite
-      name: '@deepseek-ai/dsh-storage-sqlite'
-      config:
-        path: !!js dshHomePath('learning-helper', 'state.db')
     - id: learning-helper
       name: dsh-learning-helper
-      config:
-        demo: false
-        evidencePath: !!js dshHomePath('learning-helper', 'evidence.db')
-- id: storage-domain
-  config:
-    backend: json
-    routes:
-      learning_helper: sqlite
+      config: {}

@@ -7,7 +7,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-sidebar-right/client';
 import { TaskSessionError } from './task-sessions.js';
 import type { TaskSession, TaskSessionPort, SessionSeed } from './task-sessions.js';
 type SessionId = Parameters<ISessions['open']>[0];
-type WorkspaceId = NonNullable<Parameters<ISessions['create']>[0]>['workspaceId'];
+type WorkspaceId = NonNullable<NonNullable<Parameters<ISessions['create']>[0]>['workspaceId']>;
 type RequestId = NonNullable<Parameters<NonNullable<ReturnType<ISessions['binding']>>['session']['prompt']>[3]>;
 
 /** Public Harness services only; no HTTP loopback, private API or composer draft writes. */
@@ -22,6 +22,11 @@ export function taskSessionPort(ctx: Context): TaskSessionPort {
     if (!value) throw new TaskSessionError('会话暂不可用，请刷新后重试。');
     return value;
   };
+  const verifyWorkspace = (entry: TaskSession) => {
+    const owners = workspaces.list.getSnapshot().items.filter(w => w.sessionIds.includes(entry.sessionId as SessionId));
+    if (owners.length !== 1 || owners[0]!.workspaceId !== entry.seed.workspaceId)
+      throw new TaskSessionError('任务会话的 Workspace 归属尚未确认或已改变，请刷新后重试。');
+  };
   return {
     capture() {
       const list = sessions.list.getSnapshot();
@@ -30,8 +35,8 @@ export function taskSessionPort(ctx: Context): TaskSessionPort {
       const workspace = workspaces.list.getSnapshot().items.find(w => w.sessionIds.includes(source.id));
       const projected = source.projectionValues;
       const seed: SessionSeed = {};
-      if (workspace) seed.workspaceId = workspace.workspaceId;
-      else if (source.cwd) seed.cwd = source.cwd;
+      if (!workspace) throw new TaskSessionError('请先选择有效 Workspace。');
+      seed.workspaceId = workspace.workspaceId;
       const preset = (projected as Readonly<Record<string, unknown>> | undefined)?.agentPreset;
       if (typeof preset === 'string' && preset) seed.preset = preset;
       if (projected?.modelSelection?.next) seed.model = projected.modelSelection.next;
@@ -39,15 +44,16 @@ export function taskSessionPort(ctx: Context): TaskSessionPort {
     },
     async create(entry, signal) {
       signal.throwIfAborted();
+      if (!entry.seed.workspaceId) throw new TaskSessionError('任务会话需要有效 Workspace。');
       navigation = { sessionId: entry.sessionId, signal: ctx.layout.beginNavigation() };
       try {
         await sessions.create({ sessionId: entry.sessionId as SessionId,
-          ...(entry.seed.workspaceId ? { workspaceId: entry.seed.workspaceId as WorkspaceId } : entry.seed.cwd ? { cwd: entry.seed.cwd } : {}) });
+          workspaceId: entry.seed.workspaceId as WorkspaceId });
       } catch { throw new TaskSessionError('学习会话创建未确认，请用“重试开始”继续。'); }
       signal.throwIfAborted();
     },
     async prepare(entry, signal) {
-      signal.throwIfAborted();
+      signal.throwIfAborted(); verifyWorkspace(entry);
       if (entry.seed.preset) {
         const preset = await remote.agentPresets.select(entry.sessionId as SessionId, entry.seed.preset);
         signal.throwIfAborted();
@@ -63,7 +69,7 @@ export function taskSessionPort(ctx: Context): TaskSessionPort {
       if (!renamed.ok) throw new TaskSessionError('会话标题保存失败，请重试开始。');
     },
     async send(entry, signal) {
-      signal.throwIfAborted();
+      signal.throwIfAborted(); verifyWorkspace(entry);
       const result = await binding(entry).session.prompt([{ type: 'text', text: entry.prompt }], 'queue', signal, entry.requestId as RequestId);
       signal.throwIfAborted();
       if (!result.ok) throw new TaskSessionError('学习请求发送未确认，请检查连接和模型配置，再用“重试开始”继续。');
@@ -77,6 +83,7 @@ export function taskSessionPort(ctx: Context): TaskSessionPort {
       signal.throwIfAborted();
       if (!sessions.list.getSnapshot().byId[entry.sessionId as SessionId] || workspaces.list.getSnapshot().archivedSessionIds.includes(entry.sessionId as SessionId))
         throw new TaskSessionError('会话已不可用，请在会话列表检查是否已归档。');
+      verifyWorkspace(entry);
       // Use the sidebar's own state owner, rather than only hiding its layout track.
       if (ctx.sidebarRight.isExpanded()) ctx.sidebarRight.toggleExpanded();
       sessions.open(entry.sessionId as SessionId);

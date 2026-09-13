@@ -29,18 +29,18 @@ export function PlanView({ data, taskSessions, taskState }: { data: StudentDashb
         <strong>{conceptNames(e.conceptIds, data.concepts)}</strong><p>{e.prompt}</p><p className="lh-muted">你的选择：{e.selectedOption} · 答错</p>
       </li>)}</ol></details>
     </section>}
-    <p className="lh-muted">开始日期 {plan.startsOn} · 每日最多 {data.course.dailyMinutes} 分钟</p>
+    <p className="lh-muted">开始日期 {plan.startsOn} · 每日最多 {data.project.dailyMinutes} 分钟</p>
     <p className="lh-muted">每个任务可建立独立学习会话。“新会话”自动发送本任务的学习请求；“继续学习”回到已有对话。</p>
     {taskState.error && <p role="alert" className="lh-error">{taskState.error}</p>}
     {taskState.busy && <p role="status">正在打开任务会话，请稍候…</p>}
     <PlanDays plan={plan} concepts={data.concepts} actions={(day, task) => {
-      const entries = taskState.entries.filter(e => e.courseId === data.course.id && e.planId === plan.id && e.taskId === task.id);
+      const entries = taskState.entries.filter(e => e.projectId === data.project.id && e.planId === plan.id && e.taskId === task.id);
       const latest = entries[0]; const busy = taskState.busy !== null;
       return <div className="lh-task-sessions">
         <div className="lh-task-session-actions">
           {latest && <Button variant="outline" disabled={busy} onClick={() => void taskSessions.resume(latest.sessionId)}>{latest.phase === 'sent' ? '继续学习' : '重试开始'}</Button>}
           {latest && latest.phase !== 'sent' && <Button disabled={busy} onClick={() => void taskSessions.open(latest.sessionId)}>进入会话</Button>}
-          {data.course.status === 'active' && <Button disabled={busy || entries.some(e => e.phase !== 'sent')}
+          {data.project.status === 'active' && <Button disabled={busy || entries.some(e => e.phase !== 'sent')}
             aria-label={`新会话：Day ${day} · ${conceptNames(task.conceptIds, data.concepts)}`}
             onClick={() => void taskSessions.start(taskLesson(data, day, task))}>新会话{!latest ? ' · 开始学习' : ''}</Button>}
         </div>

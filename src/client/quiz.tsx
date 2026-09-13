@@ -1,27 +1,27 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button, Tag } from '@deepseek-ai/dsh-client-ui-primitives';
 import type { PublicQuiz, QuizResult, StudentDashboard, Submission } from './types.js';
-import { request, coursePath, errorText } from './api.js';
+import { request, sessionPath, errorText } from './api.js';
 import { conceptNames, savedSubmission, saveSubmission, clearSubmission } from './model.js';
 import { Failure, Loading } from './common.js';
 import { useResource } from './resource.js';
-export function QuizView({ courseId, quizId, concepts, onSubmitted, back }: { courseId: string; quizId: string;
+export function QuizView({ sessionId, projectId, quizId, concepts, onSubmitted, back }: { sessionId: string; projectId: string; quizId: string;
   concepts: StudentDashboard['concepts']; onSubmitted: () => void; back: () => void }) {
   const [retry, setRetry] = useState(0);
-  const path = `${coursePath(courseId)}/quizzes/${encodeURIComponent(quizId)}`;
-  const state = useResource(`${courseId}:${quizId}:${retry}`, async signal => {
+  const path = `${sessionPath(sessionId)}/quizzes/${encodeURIComponent(quizId)}`;
+  const state = useResource(`${projectId}:${quizId}:${retry}`, async signal => {
     const [quiz, feedback] = await Promise.all([request<PublicQuiz>(path, signal), request<{ result: QuizResult | null }>(path + '/result', signal)]);
     return { quiz, result: feedback.result };
   });
   return <section aria-label="练习作答"><Button onClick={back}>返回练习列表</Button>
     {state.status === 'loading' ? <Loading text="正在读取练习…"/> : state.status === 'error' ? <Failure message={state.error} retry={() => setRetry(n => n + 1)}/> :
-      <QuizForm key={`${courseId}:${quizId}`} courseId={courseId} quiz={state.data.quiz} initialResult={state.data.result} concepts={concepts} onSubmitted={onSubmitted}/>}
+      <QuizForm key={`${projectId}:${quizId}`} sessionId={sessionId} projectId={projectId} quiz={state.data.quiz} initialResult={state.data.result} concepts={concepts} onSubmitted={onSubmitted}/>}
   </section>;
 }
-export function QuizForm({ courseId, quiz, initialResult, concepts, onSubmitted }: { courseId: string; quiz: PublicQuiz; initialResult: QuizResult | null;
+export function QuizForm({ sessionId, projectId, quiz, initialResult, concepts, onSubmitted }: { sessionId: string; projectId: string; quiz: PublicQuiz; initialResult: QuizResult | null;
   concepts: StudentDashboard['concepts']; onSubmitted: () => void }) {
   const [result, setResult] = useState(initialResult);
-  const [pending, setPending] = useState<Submission | null>(() => initialResult ? null : savedSubmission(courseId, quiz));
+  const [pending, setPending] = useState<Submission | null>(() => initialResult ? null : savedSubmission(projectId, quiz));
   const [answers, setAnswers] = useState<Record<string, number>>(() => Object.fromEntries(pending?.answers.map(a => [a.itemId, a.selectedOption]) ?? []));
   const [busy, setBusy] = useState(false); const [error, setError] = useState('');
   const flight = useRef<AbortController | null>(null);
@@ -32,13 +32,13 @@ export function QuizForm({ courseId, quiz, initialResult, concepts, onSubmitted 
     if (!frozen.current && quiz.items.some(i => answers[i.id] === undefined)) return;
     const payload = frozen.current ?? { submissionId: `submission-${crypto.randomUUID()}`, quizId: quiz.id,
       answers: quiz.items.map(i => ({ itemId: i.id, selectedOption: answers[i.id]! })) };
-    frozen.current = payload; setPending(payload); saveSubmission(courseId, payload);
+    frozen.current = payload; setPending(payload); saveSubmission(projectId, payload);
     const controller = new AbortController(); flight.current = controller; setBusy(true); setError('');
     try {
-      await request<unknown>(`${coursePath(courseId)}/submissions`, controller.signal, payload);
-      const response = await request<{ result: QuizResult | null }>(`${coursePath(courseId)}/quizzes/${quiz.id}/result`, controller.signal);
+      await request<unknown>(`${sessionPath(sessionId)}/submissions`, controller.signal, payload);
+      const response = await request<{ result: QuizResult | null }>(`${sessionPath(sessionId)}/quizzes/${quiz.id}/result`, controller.signal);
       if (!response.result) throw new Error('Result not committed');
-      if (!controller.signal.aborted) { setResult(response.result); clearSubmission(courseId, quiz.id); onSubmitted(); }
+      if (!controller.signal.aborted) { setResult(response.result); clearSubmission(projectId, quiz.id); onSubmitted(); }
     } catch (e) { if (!controller.signal.aborted) setError(errorText(e)); }
     finally { flight.current = null; if (!controller.signal.aborted) setBusy(false); }
   }

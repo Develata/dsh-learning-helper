@@ -3,7 +3,7 @@ import type { ModelSelection } from '@deepseek-ai/dsh-api-session-controller/typ
 import type { TaskLesson } from './task-prompt.js';
 
 export class TaskSessionError extends Error {}
-export const TASK_SESSIONS_KEY = 'learning-helper:task-sessions:v1';
+export const TASK_SESSIONS_KEY = 'learning-helper:task-sessions:v2';
 const MAX_BOOKMARKS = 100;
 export interface SessionSeed { cwd?: string; workspaceId?: string; preset?: string; model?: ModelSelection }
 export interface TaskSession extends TaskLesson {
@@ -25,7 +25,7 @@ const id = (v: unknown) => text(v, 100) && /^[a-zA-Z0-9_-]+$/.test(v as string);
 function valid(v: unknown): v is TaskSession {
   if (!v || typeof v !== 'object') return false;
   const e = v as TaskSession;
-  return id(e.courseId) && id(e.planId) && id(e.taskId) && id(e.sessionId) && id(e.requestId) &&
+  return id(e.projectId) && id(e.planId) && id(e.taskId) && id(e.sessionId) && id(e.requestId) &&
     text(e.title, 160) && text(e.prompt, 16000) && text(e.createdAt, 40) && Number.isFinite(Date.parse(e.createdAt)) &&
     ['created', 'prepared', 'sent'].includes(e.phase) && !!e.seed && typeof e.seed === 'object' &&
     (e.seed.cwd === undefined || text(e.seed.cwd, 4096)) && (e.seed.workspaceId === undefined || id(e.seed.workspaceId)) &&
@@ -128,5 +128,5 @@ export class TaskSessions {
     }
   }
   dispose() { this.disposed = true; this.lifetime?.abort(new TaskSessionError('学习插件已关闭')); this.listeners.clear(); }
-  cancel() { this.lifetime?.abort(new TaskSessionError('已切换课程，任务会话操作已中断。可回到原课程重试确认发送结果。')); }
+  cancel() { this.lifetime?.abort(new TaskSessionError('已切换 Workspace，任务会话操作已中断。可回到原 Workspace 重试确认发送结果。')); }
 }

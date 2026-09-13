@@ -1,35 +1,27 @@
 import type { Context } from '@deepseek-ai/cordis';
 import type {} from '@deepseek-ai/dsh-host-webserver';
 import type {} from '@deepseek-ai/dsh-client-connection';
+import type {} from '@deepseek-ai/dsh-workspace';
 import z from '@deepseek-ai/schemastery';
-import { HarnessLearningStore } from './providers/storage-domain.js';
-import { LearningService } from './services/learning.js';
-import { createHandler } from './host/http.js';
-import { demoCourse } from './presets/math-analysis/demo.js';
-import { SqliteEvidenceStore } from './providers/evidence-sqlite.js';
-import { TextParser } from './providers/text-parser.js';
-import { EvidenceService } from './services/evidence.js';
-import { CourseAuthoringService } from './services/authoring.js';
-import { registerLearningTools } from './tools/learning-tools.js';
-import { registerCourseTools } from './tools/course-tools.js';
+import { WorkspaceResolver } from './workspace/context.js';
+import { WorkspaceProjects } from './workspace/projects.js';
+import { workspaceHandler } from './host/workspace-http.js';
+import { registerWorkspaceTools } from './tools/workspace-tools.js';
+import { HarnessDocumentVision } from './providers/harness-vision.js';
 
 export const name = 'learning-helper';
-export const inject = ['storageDomain', 'webServer', 'connection', 'tools', 'systemPrompt'];
-export interface Config { demo: boolean; evidencePath: string }
-export const Config: z<Config> = z.object({ demo: z.boolean().default(false), evidencePath: z.string().required() });
+export const inject = ['workspaceRegistry', 'webServer', 'connection', 'tools', 'systemPrompt', 'llm', 'agents'];
+export interface Config {}
+export const Config: z<Config> = z.object({});
 
-/** Host lifetime owns one learning store; browser/Agent consumers never open competing domains. */
-export async function apply(ctx: Context, config: Config): Promise<void> {
-  const store = await HarnessLearningStore.open(ctx.storageDomain);
-  try { ctx.effect(() => () => store.close()); }
-  catch (error) { await store.close(); throw error; }
-  const service = new LearningService(store);
-  const evidence = new EvidenceService(service, new SqliteEvidenceStore(config.evidencePath), new TextParser());
-  try { ctx.effect(() => () => evidence.close()); }
-  catch (error) { await evidence.close(); throw error; }
-  if (config.demo && !store.get('demo-calculus')) await service.create(demoCourse(new Date().toISOString()));
-  ctx.effect(() => ctx.webServer.register({ kind: 'prefix', path: '/learning-helper/v1',
-    handler: createHandler(service, error => ctx.logger.error(error), req => ctx.connection.requestRejection(req), evidence) }));
-  registerCourseTools(ctx, service, evidence);
-  registerLearningTools(ctx, new CourseAuthoringService(service, evidence));
+/** One Host instance dispatches to per-session workspace owners; no global learning store. */
+export async function apply(ctx: Context, _config: Config): Promise<void> {
+  // Public WorkspaceRegistry projection; membership already validates the Session header cwd.
+  const registry = ctx.workspaceRegistry;
+  const vision = new HarnessDocumentVision(ctx);
+  const projects = new WorkspaceProjects(new WorkspaceResolver(() => registry.list()), vision);
+  ctx.effect(() => () => projects.close());
+  ctx.effect(() => ctx.webServer.register({ kind: 'prefix', path: '/learning-helper',
+    handler: workspaceHandler(projects, req => ctx.connection.requestRejection(req), error => ctx.logger.error(error)) }));
+  registerWorkspaceTools(ctx, projects, vision);
 }
