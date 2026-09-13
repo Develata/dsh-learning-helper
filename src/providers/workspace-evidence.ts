@@ -223,23 +223,20 @@ export class WorkspaceEvidenceStore implements EvidenceStore {
       if (existing) {
         const previous = this.db.prepare('SELECT data FROM chunks WHERE source_id=? AND generation_id=? ORDER BY ordinal').all(source.id, generationId).map(chunkOf);
         if (JSON.stringify(previous) !== JSON.stringify(chunks.map(c => sourceChunkSchema.parse(c)))) throw new LearningError('conflict', 'Generation identity has different content');
-        return current;
+        if (current.activeGenerationId === generationId) return current;
+      } else {
+        const usage = this.usage();
+        if (this.generations(source.id).length >= Q.generationsPerSource || usage.canonicalTextBytes > Q.canonicalTextBytes
+          || usage.indexedTextBytes + generation.textBytes > Q.indexedTextBytes) throw new LearningError('limit-exceeded', 'Workspace generation/text quota exceeded');
+        this.db.prepare('INSERT INTO generations VALUES(?,?,?)').run(source.id, generationId, JSON.stringify(generation));
+        const insert = this.db.prepare('INSERT INTO chunks(id,source_id,generation_id,ordinal,text,data) VALUES(?,?,?,?,?,?)');
+        for (const chunk of chunks) insert.run(chunk.id, source.id, generationId, chunk.ordinal, chunk.text, JSON.stringify(chunk));
       }
-      const usage = this.usage();
-      if (this.generations(source.id).length >= Q.generationsPerSource || usage.canonicalTextBytes > Q.canonicalTextBytes
-        || usage.indexedTextBytes + generation.textBytes > Q.indexedTextBytes) throw new LearningError('limit-exceeded', 'Workspace generation/text quota exceeded');
-      this.db.prepare('INSERT INTO generations VALUES(?,?,?)').run(source.id, generationId, JSON.stringify(generation));
       if (this.ftsAvailable) {
         this.db.prepare('DELETE FROM chunks_fts WHERE rowid IN (SELECT rowid FROM chunks WHERE source_id=?)').run(source.id);
         this.db.prepare('DELETE FROM chunks_trigram WHERE rowid IN (SELECT rowid FROM chunks WHERE source_id=?)').run(source.id);
-      }
-      const insert = this.db.prepare('INSERT INTO chunks(id,source_id,generation_id,ordinal,text,data) VALUES(?,?,?,?,?,?)');
-      for (const chunk of chunks) {
-        const row = insert.run(chunk.id, source.id, generationId, chunk.ordinal, chunk.text, JSON.stringify(chunk));
-        if (this.ftsAvailable) {
-          this.db.prepare('INSERT INTO chunks_fts(rowid,text) VALUES(?,?)').run(row.lastInsertRowid, chunk.text);
-          this.db.prepare('INSERT INTO chunks_trigram(rowid,text) VALUES(?,?)').run(row.lastInsertRowid, chunk.text);
-        }
+        this.db.prepare('INSERT INTO chunks_fts(rowid,text) SELECT rowid,text FROM chunks WHERE source_id=? AND generation_id=?').run(source.id, generationId);
+        this.db.prepare('INSERT INTO chunks_trigram(rowid,text) SELECT rowid,text FROM chunks WHERE source_id=? AND generation_id=?').run(source.id, generationId);
       }
       const { errorCode: _error, ...metadata } = { ...current, parser: source.parser, updatedAt: source.updatedAt };
       const ready: Source = { ...metadata, status: 'ready', chunkCount: chunks.length, activeGenerationId: generationId, canonicalAsset };

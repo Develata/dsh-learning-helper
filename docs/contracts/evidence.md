@@ -4,7 +4,7 @@ Authority：Workspace 是 Source、archive、canonical asset、Evidence 与 prov
 
 Source：raw PDF SHA-256 或规范化 TXT hash 去重；同 Workspace 相同内容只一份，不同 Workspace 独立。TXT 保留 UTF-8、heading 与精确 line/column，canonical file 从规范化全文写出。PDF 原件位于 `.learning-helper/archive/<sourceId>/original.pdf`；不作为普通搜索语料，不删除。
 
-Generation：完整验证后一次 SQLite transaction 激活 Source.activeGenerationId 与两个 FTS 投影。search 只返回 active generation；read(chunkIds) 可读取历史代，已有 Concept/Quiz sourceRefs 不失效。数据库是 active pointer truth，filesystem provenance 为可检查的投影。模型永远不能自行提供 pageCount/随意页码；PDF.js 给出 pageCount，PDF chunk 不跨页。
+Generation：完整验证后一次 SQLite transaction 激活 Source.activeGenerationId 与两个 FTS 投影。重新选择已有缓存代也必须切换 active pointer/FTS，不增加 generation 或重复 chunk。search 只返回 active generation；read(chunkIds) 可读取历史代，已有 Concept/Quiz sourceRefs 不失效。数据库是 active pointer truth，filesystem provenance 为可检查的投影。模型永远不能自行提供 pageCount/随意页码；PDF.js 给出 pageCount，PDF chunk 不跨页。
 
 检索输入：query 非空且 ≤200 字符、limit 1..20；read 1..8 个唯一 chunk，总正文≤24000 字符。SQL 参数绑定，FTS terms 单独引用；Latin unicode61/BM25、长度≥3 的 CJK terms 使用 trigram，短词/FTS 不可用时只在有界 active corpus 扫描。空格是 AND，不是语义检索。返回 structured chunkId/sourceId/filename/locator/score/excerpt/citationLabel/canonicalRef；read 包含全文。
 
@@ -24,7 +24,7 @@ Generation：完整验证后一次 SQLite transaction 激活 Source.activeGenera
 | vision / original | 每次 original 1..4真实页；单页PNG≤4MiB，最多1600px长边；视觉导入最多64页，单页60s，总600s |
 | MinerU | 全进程最多2任务，总10..600s；2s poll，无无限网络重试 |
 
-PDF modes：local-fast 全部本地；auto 低文本/图像复杂/孤立字符 heuristic 页请求视觉；high-accuracy 请求所有页视觉。能力不可用/失败时保留已存在 local generation，展示 warning；不能称为高精度成功。Vision cache key 含 raw source identity、PDF.js version、mode、provider/model 与页码。
+PDF modes：local-fast 全部本地；auto 低文本/图像复杂/孤立字符 heuristic 页请求视觉；high-accuracy 请求所有页视觉。初次导入可先提供 local generation；重新解析在目标代完整就绪前保留此前 active generation，能力不可用/失败展示 warning，不能称为高精度成功。扫描 PDF 无本地文本时切换 local-fast 必须明确失败，不能用旧视觉结果宣称本地解析成功。Vision cache key 含 raw source identity、PDF.js version、mode、provider/model 与页码。
 
 MinerU 是独立增强动作：health(protocol2) → 单次 POST /tasks → status → JSON result。只支持官方 pipeline/vlm-engine/hybrid-engine 自托管 backend，不跟随返回 URL。结果 UTF-8/大小/page_idx/media 路径验证后立即持久化 derived Markdown、结构化内容、图片与 provenance，再激活。未知提交结果标 outcome-unknown，需要用户明确检查并重试；已知 taskId 超时/重启可恢复。失败不使已有 PDF evidence 不可用。重复启动恢复已终结的状态必须保持 Source 快照（包括 updatedAt）不变；只有真实状态变化才更新时间。
 

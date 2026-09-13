@@ -84,8 +84,12 @@ export class PdfSources {
       source = this.store.parsingMetadata(source.id, { pageCount: local.pageCount, originalAsset: original, parseMode: mode, parseWarning: undefined });
       const localId = `gen_${hashText(`${this.parser.id}:local-fast`)}`;
       const localChunks = pageChunks(source, localId, local.pages);
-      if (localChunks.length) source = this.store.activate({ ...source, parser: this.parser.id }, localId, localChunks);
       const pages = mode === 'local-fast' ? [] : local.pages.filter(p => mode === 'high-accuracy' || p.reasons.length > 0);
+      // Initial ingestion can expose local evidence while vision runs. A reparse must
+      // preserve the previous complete generation until its requested replacement is ready.
+      if (localChunks.length && (source.status !== 'ready' || !pages.length))
+        source = this.store.activate({ ...source, parser: this.parser.id }, localId, localChunks);
+      if (!pages.length && !localChunks.length) throw new LearningError('invalid-input', 'PDF contains no locally extractable text; use vision or MinerU');
       if (pages.length) {
         const capability = await cancelled(this.vision.available(context, signal), signal);
         if (!capability.available) {

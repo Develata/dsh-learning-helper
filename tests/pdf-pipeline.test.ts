@@ -72,6 +72,48 @@ test('missing vision and invalid model page cannot corrupt existing local genera
   });
 });
 
+test('PDF mode switches reactivate cached generations and failed vision preserves the active one', async t => {
+  let fail = false; let calls = 0;
+  const vision: DocumentVisionProvider = {
+    async available() { return { available: true, cacheKey: fail ? 'failing-v2' : 'switch-v1' }; },
+    async understandPages(_context, pages) {
+      calls += pages.length;
+      if (fail) throw new Error('Provider unavailable');
+      return pages.map(page => ({ page: page.page, text: `Visual theorem on page ${page.page}: 一致连续。` }));
+    },
+  };
+  const { projects, resolver } = await setup(t, vision);
+  const bytes = makePdf([{ text: 'A normal page with enough text about local compactness and continuity.' }, { image: true }]);
+  let id = ''; let autoId = ''; let historical = '';
+  await projects.use('session', signal(), async p => {
+    const run = (mode: string) => p.pdf.import({ filename: 'switch.pdf', mode }, bytes, { sessionId: 'session' }, signal());
+    const search = (query: string) => p.evidence.search({ courseId: p.projectId, query }).results;
+    const auto = await run('auto'); id = auto.source.id; autoId = auto.source.activeGenerationId!;
+    const high = await run('high-accuracy'); historical = search('Visual')[0]!.chunkId;
+    assert.notEqual(high.source.activeGenerationId, autoId);
+    const local = await run('local-fast');
+    assert.match(local.source.parser, /^pdfjs/);
+    assert.notEqual(local.source.activeGenerationId, high.source.activeGenerationId);
+    assert.equal(search('Visual').length, 0); assert.equal(search('一致连续').length, 0);
+    assert.equal(search('compactness').length, 1);
+    const cached = await run('auto');
+    assert.equal(cached.source.activeGenerationId, autoId); assert.equal(calls, 3);
+    assert.equal(search('Visual').length, 1); assert.equal(search('一致连续').length, 1);
+    assert.equal(p.evidence.read({ courseId: p.projectId, chunkIds: [historical] }).chunks.length, 1);
+    fail = true;
+    await assert.rejects(run('high-accuracy'), /Provider unavailable/);
+    assert.equal(p.assets.getSource(id).activeGenerationId, autoId);
+    assert.equal(search('Visual').length, 1);
+  });
+  await projects.close();
+  const reopened = new WorkspaceProjects(resolver); t.after(() => reopened.close());
+  await reopened.use('session', signal(), p => {
+    assert.equal(p.assets.getSource(id).activeGenerationId, autoId);
+    assert.equal(p.evidence.search({ courseId: p.projectId, query: '一致连续' }).results.length, 1);
+    assert.equal(p.evidence.read({ courseId: p.projectId, chunkIds: [historical] }).chunks.length, 1);
+  });
+});
+
 test('vision cancellation preserves local evidence and prevents racing MinerU activation', async t => {
   let entered!: () => void; const started = new Promise<void>(resolve => { entered = resolve; });
   const vision: DocumentVisionProvider = { async available() { return { available: true, cacheKey: 'cancel-v1' }; },
@@ -87,5 +129,22 @@ test('vision cancellation preserves local evidence and prevents racing MinerU ac
     control.abort(); await rejected;
     assert.equal(p.assets.getSource(source.id).parsing, 'failed');
     assert.equal(p.evidence.search({ courseId: p.projectId, query: 'compactness' }).results.length, 1);
+  });
+});
+
+test('image-only PDF cannot report local-fast success by retaining its old visual text', async t => {
+  const vision: DocumentVisionProvider = {
+    async available() { return { available: true, cacheKey: 'image-v1' }; },
+    async understandPages(_context, pages) { return pages.map(page => ({ page: page.page, text: 'Visual continuity theorem' })); },
+  };
+  const { projects } = await setup(t, vision);
+  await projects.use('session', signal(), async p => {
+    const bytes = makePdf([{ image: true }]);
+    const first = await p.pdf.import({ filename: 'scan.pdf', mode: 'high-accuracy' }, bytes, { sessionId: 'session' }, signal());
+    await assert.rejects(p.pdf.import({ filename: 'scan.pdf', mode: 'local-fast' }, bytes, { sessionId: 'session' }, signal()), /no locally extractable text/);
+    const current = p.assets.getSource(first.source.id);
+    assert.equal(current.activeGenerationId, first.source.activeGenerationId);
+    assert.equal(current.parsing, 'failed');
+    assert.equal(p.evidence.search({ courseId: p.projectId, query: 'Visual' }).results.length, 1);
   });
 });
