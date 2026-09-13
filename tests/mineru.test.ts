@@ -89,3 +89,29 @@ test('MinerU generation switch preserves archived PDF and old citations; duplica
     assert.equal(service.start({ sourceId }, signal()).accepted, false); assert.equal(state.submits, 1);
   });
 });
+
+test('restart of an already failed MinerU job preserves the durable source snapshot', async t => {
+  const { state, adapter, config } = await server(t); state.mode = 'failed';
+  const root = mkdtempSync(join(tmpdir(), 'lh-mineru-restart-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  await initializeProject(root, { title: 'PDF', subject: 'Analysis', dailyMinutes: 60 });
+  writeConfig(root, { schemaVersion: 2, documentParsing: { pdfMode: 'local-fast', mineru: config } });
+  const resolver = new WorkspaceResolver(() => [{ path: root, sessionIds: ['s'] }]);
+  const projects = new WorkspaceProjects(resolver); t.after(() => projects.close());
+  let sourceId = ''; let before: unknown;
+  await projects.use('s', signal(), async p => {
+    const imported = await p.pdf.import({ filename: 'failed-conversion.pdf', mode: 'local-fast' },
+      makePdf([{ text: 'Local evidence remains available after conversion fails.' }]), { sessionId: 's' }, signal());
+    sourceId = imported.source.id;
+    const service = new Assetization(root, p.assets, () => adapter, 1);
+    try { await assert.rejects(service.start({ sourceId }, signal()).done, /failed or was lost/); }
+    finally { await service.close(); }
+    before = p.assets.getSource(sourceId);
+    assert.equal(p.assets.getSource(sourceId).assetization, 'failed');
+  });
+  await projects.close();
+  // A later restart is a read/recovery operation, not another failed conversion.
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() + 10_000 });
+  const reopened = new WorkspaceProjects(resolver); t.after(() => reopened.close());
+  await reopened.use('s', signal(), p => { assert.deepEqual(p.assets.getSource(sourceId), before); });
+});

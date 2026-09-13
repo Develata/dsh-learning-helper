@@ -255,7 +255,9 @@ export class WorkspaceEvidenceStore implements EvidenceStore {
     finally { this.imports.delete(id); }
   }
   assetization(id: string, state: NonNullable<Source['assetization']>): void {
-    const source = this.getSource(id); this.writeSource({ ...source, assetization: state, updatedAt: new Date().toISOString() });
+    const source = this.getSource(id);
+    if (source.assetization === state) return; // Recovery must not rewrite a settled state.
+    this.writeSource({ ...source, assetization: state, updatedAt: new Date().toISOString() });
   }
   parsingMetadata(id: string, metadata: Pick<Source, 'pageCount' | 'originalAsset' | 'parseMode' | 'parseWarning' | 'parsing'>): Source {
     const source = this.getSource(id);

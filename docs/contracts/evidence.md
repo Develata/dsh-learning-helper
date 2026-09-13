@@ -26,6 +26,6 @@ Generation：完整验证后一次 SQLite transaction 激活 Source.activeGenera
 
 PDF modes：local-fast 全部本地；auto 低文本/图像复杂/孤立字符 heuristic 页请求视觉；high-accuracy 请求所有页视觉。能力不可用/失败时保留已存在 local generation，展示 warning；不能称为高精度成功。Vision cache key 含 raw source identity、PDF.js version、mode、provider/model 与页码。
 
-MinerU 是独立增强动作：health(protocol2) → 单次 POST /tasks → status → JSON result。只支持官方 pipeline/vlm-engine/hybrid-engine 自托管 backend，不跟随返回 URL。结果 UTF-8/大小/page_idx/media 路径验证后立即持久化 derived Markdown、结构化内容、图片与 provenance，再激活。未知提交结果标 outcome-unknown，需要用户明确检查并重试；已知 taskId 超时/重启可恢复。失败不使已有 PDF evidence 不可用。
+MinerU 是独立增强动作：health(protocol2) → 单次 POST /tasks → status → JSON result。只支持官方 pipeline/vlm-engine/hybrid-engine 自托管 backend，不跟随返回 URL。结果 UTF-8/大小/page_idx/media 路径验证后立即持久化 derived Markdown、结构化内容、图片与 provenance，再激活。未知提交结果标 outcome-unknown，需要用户明确检查并重试；已知 taskId 超时/重启可恢复。失败不使已有 PDF evidence 不可用。重复启动恢复已终结的状态必须保持 Source 快照（包括 updatedAt）不变；只有真实状态变化才更新时间。
 
 路径：只保存相对路径；所有组件检查 containment 和 symlink。支持可信本地文件系统单 Host；不声称抵抗拥有同一文件系统写权限的恶意 OS 进程，也不支持 NFS/SMB/同步云盘上的 SQLite 多写。
