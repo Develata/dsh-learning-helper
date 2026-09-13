@@ -11,6 +11,7 @@ import { QuizView } from './quiz.js';
 import { quickPrompt } from './model.js';
 import type { TaskSessionsProps } from './task-sessions.js';
 import type { ProjectManifest } from '../workspace/context.js';
+import { LearningContent } from './learning-content.js';
 const sections: [Section, string][] = [['course', '资料'], ['plan', '计划'], ['progress', '进度'], ['quiz', '练习']];
 type PanelProps = { sessionId: string | null; navigation: Navigation; revision: number; inputActions: InputActions; inputDraft: string; fullscreen: boolean } & TaskSessionsProps;
 export function LearningPanel(props: PanelProps) {
@@ -63,7 +64,7 @@ function ProjectWorkspace({ sessionId, course, navigation, revision, inputAction
     {section === 'quiz' && (quizId ? <QuizView key={quizId} sessionId={sessionId} projectId={course.id} quizId={quizId} concepts={data.concepts}
       back={() => setQuizId('')} onSubmitted={() => setRefresh(n => n + 1)}/> : <section aria-label="练习列表"><h2>练习与回顾</h2>
         {!data.quizzes.length ? <p className="lh-empty">还没有练习。计划就绪后，让 Agent 从课程资料生成题目。</p> : <ul className="lh-quiz-list">{data.quizzes.map(q => <li key={q.id}>
-          <div className="lh-row"><strong>{q.purpose}</strong><Tag tone={q.submitted ? 'success' : 'neutral'}>{q.submitted ? `已完成 · ${q.correctCount}/${q.itemCount}` : `${q.itemCount} 题 · 未作答`}</Tag></div>
+          <div className="lh-row"><LearningContent className="lh-content-title" text={q.purpose}/><Tag tone={q.submitted ? 'success' : 'neutral'}>{q.submitted ? `已完成 · ${q.correctCount}/${q.itemCount}` : `${q.itemCount} 题 · 未作答`}</Tag></div>
           <Button variant="outline" onClick={() => setQuizId(q.id)}>{q.submitted ? '查看反馈' : '开始练习'}</Button>
         </li>)}</ul>}
       </section>)}

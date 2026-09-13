@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { mathConceptName, mathPlanReason, mathQuestions, checkMathQuiz, checkMathFallback } from './math-browser-checks.mjs';
 
 async function deadline(promise, label) {
   let timer;
@@ -119,25 +120,20 @@ export async function browserSmoke({ web, harness, plugin, work, workspacePath, 
     await dispatch('course_read', { chunkIds: continuityIds });
     await dispatch('course_outline_publish', { concepts: [
       { id: 'continuity', name: '连续性 · Continuity', aliases: [], prerequisiteIds: [], evidenceChunkIds: continuityIds },
-      { id: 'uniform', name: '一致连续 · Uniform Continuity', aliases: [], prerequisiteIds: ['continuity'], evidenceChunkIds: chunkIds },
+      { id: 'uniform', name: mathConceptName, aliases: [], prerequisiteIds: ['continuity'], evidenceChunkIds: chunkIds },
     ] }, true);
     await dispatch('study_plan_publish', { startsOn: new Date().toISOString().slice(0, 10), days: [1,2,3].map(day => ({ day,
-      tasks: [{ type: 'learn', conceptIds: ['continuity', 'uniform'], estimatedMinutes: 40, reason: '阅读课程定义、定理与证明。' },
+      tasks: [{ type: 'learn', conceptIds: ['continuity', 'uniform'], estimatedMinutes: 40, reason: mathPlanReason },
         { type: 'practice', conceptIds: ['uniform'], estimatedMinutes: 20, questionCount: 5, reason: '用练习检查定理假设与反例。' }] })) }, true);
     await panel.getByRole('button', { name: '刷新学习项目', exact: true }).click();
     await panel.getByRole('button', { name: '计划', exact: true }).click();
     await panel.getByRole('heading', { name: '当前计划 · v1', exact: true }).waitFor();
-    const questions = [
-      ['连续性要求什么？', ['极限等于函数值', '极限无需存在'], '连续性的定义要求极限等于函数值。'],
-      ['连续函数的序列刻画中，x_n 趋于 a 时？', ['f(x_n) 趋于 f(a)', '必定发散'], '讲义给出了连续性的序列刻画。'],
-      ['闭区间上的连续函数是否一致连续？', ['是', '否'], '闭区间上的连续函数一致连续。'],
-      ['一致连续中的 δ 是否能依赖点的位置？', ['不能', '可以'], 'SECRET_EXPLANATION_934：统一的 δ 不依赖点的位置。'],
-      ['Heine-Cantor 定理要求定义域满足什么条件？', ['闭区间', '任意开区间'], '闭区间与连续性给出一致连续，开区间上的 1/x 是反例。'],
-    ];
+    const questions = mathQuestions;
     const published = await dispatch('quiz_publish', { purpose: 'Day 1 · 连续与一致连续自测', items: questions.map(([prompt, options, explanation], i) => ({
       prompt, options: [options[1], '以上定义均不适用', options[0]], correctOption: 2, explanation, difficulty: 'medium', conceptIds: [i < 3 ? 'continuity' : 'uniform'], evidenceChunkIds: i < 3 ? continuityIds : chunkIds,
     })) }, true);
     for (let i = 0; i < 10 && await page.locator('[data-turn-process][aria-expanded=false]').count(); i++) await page.locator('[data-turn-process][aria-expanded=false]').first().click();
+    assert.ok(await page.locator('.lh-tool-card .katex').count() > 0, 'outline tool card renders math');
     const card = page.getByRole('region', { name: '课程练习工具卡片' });
     await card.getByText('5 题练习已生成', { exact: true }).waitFor();
     assert.doesNotMatch(await card.innerHTML(), /correctOption|explanation|SECRET_EXPLANATION_934|Inspect|argsRaw/);
@@ -148,6 +144,7 @@ export async function browserSmoke({ web, harness, plugin, work, workspacePath, 
     const publicQuiz = await (await web.get(`/learning-helper/v2/sessions/${sessionId}/quizzes/${published.quiz.id}`)).json();
     assert.doesNotMatch(JSON.stringify(publicQuiz), /correctOption|explanation|SECRET_EXPLANATION_934/);
     assert.doesNotMatch(await quizForm.innerHTML(), /correctOption|explanation|SECRET_EXPLANATION_934/);
+    await checkMathQuiz({ page, panel, form: quizForm, screenshots });
     const groups = quizForm.locator('fieldset'); assert.equal(await groups.count(), 5);
     await groups.nth(0).getByRole('radio').nth(0).focus();
     await page.keyboard.press('Space'); await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowRight');
@@ -171,10 +168,12 @@ export async function browserSmoke({ web, harness, plugin, work, workspacePath, 
     await quizForm.getByRole('alert').waitFor();
     await quizForm.getByRole('button', { name: '重试提交原答案', exact: true }).click();
     await quizForm.getByText('已完成 · 答对 3/5 题', { exact: true }).waitFor();
+    assert.ok(await quizForm.locator('.lh-feedback .katex').count() > 0, 'submitted explanations render math');
     assert.equal(submissions.length, 3); assert.deepEqual(submissions[0], submissions[1]); assert.deepEqual(submissions[1], submissions[2]);
     assert.equal(firstReceipt.attempts.length, 5); await page.unroute(submitUrl);
     await panel.getByRole('button', { name: '进度', exact: true }).click();
     await panel.getByText('薄弱 · Weak', { exact: true }).waitFor();
+    assert.ok(await panel.locator('.lh-progress .katex').count() > 0, 'concept names render math');
     await panel.screenshot({ path: join(screenshots, 'product-progress.png') });
     await panel.getByRole('button', { name: '计划', exact: true }).click();
     await panel.getByRole('heading', { name: '当前计划 · v2', exact: true }).waitFor();
@@ -216,6 +215,7 @@ export async function browserSmoke({ web, harness, plugin, work, workspacePath, 
     await panel.getByRole('button', { name: '重试', exact: true }).click();
     await panel.getByRole('heading', { name: '当前计划 · v2', exact: true }).waitFor();
     await page.unroute(dashboardRoute);
+    await checkMathFallback({ page, panel, sessionId, quizId: published.quiz.id, screenshots });
     // Workspace navigation is owned by Harness, not a Learning course selector.
     assert.equal(await panel.getByLabel('当前课程', { exact: true }).count(), 0);
     async function chooseWorkspace(path) {
@@ -355,6 +355,7 @@ export async function browserSmoke({ web, harness, plugin, work, workspacePath, 
       courseId, quizId: published.quiz.id, checks: ['create/upload/dedupe','native slots','composer prefill','real tool dispatch and replay cards',
         ...(branding ? ['Learning Helper title/welcome/manifest/favicon', 'brand slots expanded/collapsed and responsive light/dark'] : []),
         'pre-submit public payload and DOM key isolation','submit failure and lost-response retry','weak/v2/revision evidence','refresh feedback','dashboard/source failure recovery','Workspace A/B isolation, stale response and restore','100-source soft warning projection','MinerU connection failure preserves PDF','keyboard radios','PDF binary upload and page metadata','responsive light/dark geometry; native fullscreen at 1024px',
+        'math delimiters, fonts, quiz/feedback/concepts/plan/tool cards; long formula scrolling; malformed TeX/code/currency/HTML safety',
         'task session create and auto-send through real Harness with fixture provider','inherits model selection','task session bookmarks survive refresh','continue does not resend','lost prompt response retries same identity after reload'],
       viewportWidths: [1440,1024,390], pageErrors: errors, semanticLlmRun: false }, null, 2));
     return { sessionId, projectId: courseId, quizId: published.quiz.id };

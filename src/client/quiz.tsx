@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Button, Tag } from '@deepseek-ai/dsh-client-ui-primitives';
 import type { PublicQuiz, QuizResult, StudentDashboard, Submission } from './types.js';
 import { request, sessionPath, errorText } from './api.js';
 import { conceptNames, savedSubmission, saveSubmission, clearSubmission } from './model.js';
 import { Failure, Loading } from './common.js';
 import { useResource } from './resource.js';
+import { LearningContent } from './learning-content.js';
 export function QuizView({ sessionId, projectId, quizId, concepts, onSubmitted, back }: { sessionId: string; projectId: string; quizId: string;
   concepts: StudentDashboard['concepts']; onSubmitted: () => void; back: () => void }) {
   const [retry, setRetry] = useState(0);
@@ -20,6 +21,7 @@ export function QuizView({ sessionId, projectId, quizId, concepts, onSubmitted, 
 }
 export function QuizForm({ sessionId, projectId, quiz, initialResult, concepts, onSubmitted }: { sessionId: string; projectId: string; quiz: PublicQuiz; initialResult: QuizResult | null;
   concepts: StudentDashboard['concepts']; onSubmitted: () => void }) {
+  const questionPrefix = useId();
   const [result, setResult] = useState(initialResult);
   const [pending, setPending] = useState<Submission | null>(() => initialResult ? null : savedSubmission(projectId, quiz));
   const [answers, setAnswers] = useState<Record<string, number>>(() => Object.fromEntries(pending?.answers.map(a => [a.itemId, a.selectedOption]) ?? []));
@@ -44,20 +46,22 @@ export function QuizForm({ sessionId, projectId, quiz, initialResult, concepts, 
   }
   const feedback = new Map(result?.items.map(i => [i.itemId, i]) ?? []);
   return <form aria-label="自测练习" onSubmit={e => { e.preventDefault(); void submit(); }}>
-    <header className="lh-quiz-heading"><div className="lh-eyebrow">COURSE PRACTICE</div><h2>{quiz.purpose}</h2>
+    <header className="lh-quiz-heading"><div className="lh-eyebrow">COURSE PRACTICE</div><div role="heading" aria-level={2} className="lh-content-heading"><LearningContent text={quiz.purpose}/></div>
       {result ? <p role="status">已完成 · 答对 {result.correctCount}/{result.itemCount} 题</p> : <p className="lh-muted">{quiz.items.length} 道题 · 请完成所有题目后提交</p>}</header>
     {quiz.items.map((item, index) => {
       const f = feedback.get(item.id);
-      return <fieldset key={item.id} className="lh-question" disabled={busy || !!pending || !!result}>
-        <legend><span className="lh-eyebrow">QUESTION {index + 1} / {quiz.items.length}</span><span className="lh-prompt">{item.prompt}</span></legend>
+      const promptId = `${questionPrefix}-${index}`;
+      return <fieldset key={item.id} className="lh-question" aria-describedby={promptId} disabled={busy || !!pending || !!result}>
+        <legend><span className="lh-eyebrow">QUESTION {index + 1} / {quiz.items.length}</span></legend>
+        <LearningContent id={promptId} className="lh-prompt" text={item.prompt}/>
         <div className="lh-options">{item.options.map((option, n) => <label key={n} className="lh-option">
           <input type="radio" name={`${quiz.id}:${item.id}`} value={n} checked={(f?.selectedOption ?? answers[item.id]) === n}
-            onChange={() => setAnswers(a => ({ ...a, [item.id]: n }))}/><span className="lh-option-letter">{String.fromCharCode(65 + n)}</span><span>{option}</span>
+            onChange={() => setAnswers(a => ({ ...a, [item.id]: n }))}/><span className="lh-option-letter">{String.fromCharCode(65 + n)}</span><LearningContent text={option}/>
         </label>)}</div>
         {f && <div className="lh-feedback"><Tag tone={f.correct ? 'success' : 'warning'}>{f.correct ? '答对了' : '需要再想一想 · 答错'}</Tag>
-          <p>你的答案：{String.fromCharCode(65 + f.selectedOption)} · {item.options[f.selectedOption]}</p>
-          <p>正确答案：{String.fromCharCode(65 + f.correctOption)} · {item.options[f.correctOption]}</p><p>{f.explanation}</p>
-          <p className="lh-muted">知识点：{conceptNames(item.conceptIds, concepts)}</p>
+          <LearningContent text={`你的答案：${String.fromCharCode(65 + f.selectedOption)} · ${item.options[f.selectedOption]}`}/>
+          <LearningContent text={`正确答案：${String.fromCharCode(65 + f.correctOption)} · ${item.options[f.correctOption]}`}/><LearningContent text={f.explanation}/>
+          <LearningContent className="lh-muted" text={`知识点：${conceptNames(item.conceptIds, concepts)}`}/>
         </div>}
       </fieldset>;
     })}

@@ -5,12 +5,13 @@ import { conceptNames, taskLabel, statusRank } from './model.js';
 import { Status } from './common.js';
 import { taskLesson, type PlanTask } from './task-prompt.js';
 import type { TaskSessionsProps } from './task-sessions.js';
+import { LearningContent } from './learning-content.js';
 export function PlanDays({ plan, concepts, actions }: { plan: NonNullable<StudentDashboard['currentPlan']>; concepts: StudentDashboard['concepts']; actions?: (day: number, task: PlanTask) => ReactNode }) {
   return <div className="lh-days">{plan.days.map(day => <section className="lh-day" key={day.day}>
     <header className="lh-row"><h3>Day {day.day}</h3><span className="lh-muted">{day.tasks.reduce((n, t) => n + t.estimatedMinutes, 0)} 分钟</span></header>
     <ul>{day.tasks.map(task => <li key={task.id} className={task.type === 'review' ? 'lh-targeted' : ''}>
       <div className="lh-task-label">{taskLabel(task)}{task.status === 'done' ? ' · 已完成' : ''}</div>
-      <div>{conceptNames(task.conceptIds, concepts)}</div><p className="lh-muted">{task.reason}</p>
+      <LearningContent text={conceptNames(task.conceptIds, concepts)}/><LearningContent className="lh-muted lh-task-reason" text={task.reason}/>
       {actions?.(day.day, task)}
     </li>)}</ul>
   </section>)}</div>;
@@ -21,12 +22,12 @@ export function PlanView({ data, taskSessions, taskState }: { data: StudentDashb
   return <section aria-label="学习计划"><header className="lh-row"><h2>当前计划 <span className="lh-muted">· v{plan.version}</span></h2><Tag tone="neutral">{plan.days.length} 天</Tag></header>
     {revision && <section className="lh-revision" aria-label="为什么计划改变">
       <div className="lh-eyebrow">WHY THIS PLAN CHANGED</div><h3>错题改变了接下来的计划</h3>
-      <p>计划 v{revision.oldVersion} → v{revision.newVersion}</p><p>{revision.reason}</p>
+      <p>计划 v{revision.oldVersion} → v{revision.newVersion}</p><LearningContent text={revision.reason}/>
       <ul className="lh-revision-actions">{data.recentRevisionTasks.map(({ day, task }) => <li key={task.id}>
-        <strong>Day {day} · {taskLabel(task)}</strong><div>{conceptNames(task.conceptIds, data.concepts)}</div>
+        <strong>Day {day} · {taskLabel(task)}</strong><LearningContent text={conceptNames(task.conceptIds, data.concepts)}/>
       </li>)}</ul>
       <details><summary>{data.recentRevisionEvidence.length} 条错题证据</summary><ol>{data.recentRevisionEvidence.map(e => <li key={e.attemptId}>
-        <strong>{conceptNames(e.conceptIds, data.concepts)}</strong><p>{e.prompt}</p><p className="lh-muted">你的选择：{e.selectedOption} · 答错</p>
+        <LearningContent className="lh-content-title" text={conceptNames(e.conceptIds, data.concepts)}/><LearningContent text={e.prompt}/><LearningContent className="lh-muted" text={`你的选择：${e.selectedOption} · 答错`}/>
       </li>)}</ol></details>
     </section>}
     <p className="lh-muted">开始日期 {plan.startsOn} · 每日最多 {data.project.dailyMinutes} 分钟</p>
@@ -57,7 +58,7 @@ export function ProgressView({ data }: { data: StudentDashboard }) {
   return <section aria-label="知识点进度"><h2>把注意力留给薄弱处</h2><p className="lh-muted">状态来自实际作答，随练习更新。</p>
     {!data.concepts.length ? <p className="lh-empty">尚无知识点。请先让 Agent 根据资料建立课程结构。</p> :
       <ul className="lh-progress">{[...data.concepts].sort((a, b) => statusRank[a.status] - statusRank[b.status]).map(c => <li key={c.id}>
-        <div className="lh-row"><strong>{c.name}</strong><Status status={c.status}/></div><span className="lh-muted">{c.evidenceCount} 次作答证据</span>
+        <div className="lh-row"><LearningContent className="lh-content-title" text={c.name}/><Status status={c.status}/></div><span className="lh-muted">{c.evidenceCount} 次作答证据</span>
       </li>)}</ul>}
   </section>;
 }

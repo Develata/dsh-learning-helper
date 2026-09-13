@@ -42,12 +42,11 @@
 .lh-revision summary { cursor: pointer; min-height: 44px; padding: 10px 0; }
 .lh-revision ol { margin: 0; padding-left: 20px; }
 .lh-revision li + li { margin-top: 16px; }
-.lh-days { display: grid; gap: 20px; }
+.lh-days { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
 .lh-day { border-top: 1px solid var(--lh-line); padding-top: 14px; }
 .lh-day li { padding: 12px 0 8px 14px; border-left: 2px solid var(--lh-line); margin-top: 12px; }
 .lh-day li.lh-targeted { border-left-color: var(--dsw-alias-state-warn-primary); }
 .lh-task-label { font-size: 12px; color: var(--lh-muted); margin-bottom: 3px; }
-.lh-day li p { font-size: 12px; margin: 4px 0 0; }
 .lh-error { margin: 14px 0; border-left: 3px solid var(--dsw-alias-state-error-primary); padding: 8px 12px; background: var(--dsw-alias-bg-module-platform); }
 .lh-question { border: 0; padding: 0; margin: 28px 0; min-width: 0; }
 .lh-question legend { width: 100%; padding: 0; }
@@ -84,3 +83,19 @@
 
 .lh-form input:is([type=checkbox],[type=radio]) { width: 16px; height: 16px; min-width: 16px; min-height: 16px; margin: 0 8px 0 0; accent-color: var(--dsw-alias-brand-primary); vertical-align: middle; }
 .lh-form label > small { display: block; margin: 5px 0 0 24px; color: var(--lh-muted); line-height: 1.5; }
+
+/* Shared Markdown/KaTeX keeps the panel's typography; long formulas scroll locally. */
+.lh-content { min-width: 0; max-width: 100%; overflow-x: auto; }
+.lh-content > div { font: inherit; color: inherit; }
+.lh-content p { font: inherit; margin: 8px 0; }
+.lh-content > div > :first-child { margin-top: 0; }
+.lh-content > div > :last-child { margin-bottom: 0; }
+.lh-content .katex-display { max-width: 100%; overflow-x: auto; overflow-y: hidden; padding: 3px 0; text-align: left; }
+.lh-content .katex-display > .katex { text-align: left; }
+.lh-content-title { font-weight: 600; }
+.lh-row > .lh-content-title { flex: 1; }
+.lh-content-heading { font-size: 18px; font-weight: 600; line-height: 1.5; margin: 16px 0 8px; }
+.lh-option > .lh-content { flex: 1; }
+.lh-option-letter { flex-shrink: 0; }
+.lh-task-reason { margin-top: 4px; }
+.lh-feedback > .lh-content { margin: 8px 0 12px; font-size: 13px; }

@@ -33,3 +33,7 @@ Quiz：load → answering → submitting → submitted。第一次提交冻结 a
 书签在同源 localStorage `learning-helper:task-sessions:v2`，projectId/planId/taskId/sessionId/requestId 与 created/prepared/sent 状态；≤100、prompt≤16000字符、总读取≤200万字符。内容由 Harness 持久化。浏览器数据清除或 origin 改变会失去书签入口，但聊天仍在 Harness；v1 书签 key 保留，不当作 v2 作用域授权。创建/发送有30秒界限，响应丢失用同一 identity 重试，迟到回调不得继续导航。
 
 使用 Harness tokens/primitives；按钮/单选有名字，状态同时用文字，错误/status有语义。1440/1024/390 使用原生 push/fullscreen。三个正式 brand slots 为 Learning Helper，不替换实际 provider/model 技术名。v0.2 不合入独立品牌 fork 的 runtime 变更。
+
+学习内容通过统一 `LearningContent` 显示，调用固定 Harness 的公开 `MarkdownText`（内置 KaTeX/CSS/字体），不另打包数学引擎。覆盖题目、选项、提交后解析、练习标题、知识点、计划说明/错题证据及安全 tool card 文本。支持 `$…$` / `\(…\)` 行内公式、`$$…$$` / `\[…\]` 独立公式；代码中的公式记号保持字面量，错误 TeX 保留可读回退。未加分隔符的普通文字不猜测为数学表达式。仅改变显示，不修改保存的原文、citation、答案或评分。
+
+沿用 Harness 对不可信 Markdown 的 HTML/URL/KaTeX trust 限制：原始 HTML 不执行，TeX 不开启 trusted commands；不接入任意 workspace 文件 opener。长公式仅在内容内横向滚动，不撑宽计划 Grid/选项或手机面板。标签为稳定常量，复用 MarkdownText 的 memoized parse，选择答案不重新解析不变的内容。字体与颜色继承原生主题；题干通过 aria-describedby 关联题组，选项保留原生单选标签与键盘交互。
