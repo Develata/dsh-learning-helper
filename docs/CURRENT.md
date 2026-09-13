@@ -1,13 +1,15 @@
 # 当前状态
 
-- Current phase：v0.2 体验改进：插件数学公式显示已接入并通过 packed Web/Chromium 验收。仍在 feat/workspace-v02，未打 tag、未合入默认分支、未更新日常实例。
-- Last verified runtime：0ffef0df3e4d5ab01aa90f21d608a048c68a764f（数学显示与回归测试）；后续提交仅文档。当前远端/运行壳 pin 仍是此前 a0fa0c6a851cb106ac00b02b3381b5c126110837，尚未发布本次数学 UI 更新。v0.1.0仍指向958cf67627736232d06a9eeee70cdcb2c0369248，upstream仍为c291e7961a515f6d7af9304e7fd1d257929aef26。
-- Works：官方Session→Workspace→单Project；7 tools无courseId，无global picker/learning DB；Workspace内state/evidence、稳定manifest、relative assets、200/201 source边界；PDF.js/原件/page citation；gated vision/cache、MinerU protocol2、atomic generation/historical read；显式offline v1迁移保留原库；原学习闭环与任务会话保留。 学习内容统一经公开MarkdownText/KaTeX渲染：题目/选项/解析/知识点/计划/tool cards；无新增依赖，未改Host/Domain/持久化。
-- Verification：本轮typecheck、146/146（126 backend+20 client）、build/pack、3个原学习demo通过；无sibling的新临时目录frozen install/typecheck/tests/build/pack通过；packed标准Agent/认证/A-B/restart及Chromium通过。数学专项：四种分隔符、KaTeX字体、公式选项点击、键盘、提交后解释、错误TeX/code/currency/HTML/URL安全、长公式横向滚动；1440light/dark、1024、390实际截图审查，pageErrors=[]。回执artifacts/integration-result.json与/tmp/lh-math-browser/result.json；Browser plugin not available，使用现有Playwright 1.61.1。CodeGraph sync与Harness runtime 0 diff通过。
-- Docker：历史已验证runtime aad1263221da277f70ca1d724aff4e83fad29be2从固定远端源码build --no-cache，新volume冷启动、Chromium、认证、容器重启持久化通过；image b928a43414dc76156a482bd7dfb7026032a6ea205cdbf87cbb5d76c2af34b6bc。本次数学显示未重建镜像/更新部署，旧v02-runtime-equivalence回执不能用于宣称本轮运行文件一致。
-- Real Agent（此前v0.2验收，本轮显示变更未再调用模型）：newapi/gpt-5.6-luna，六场景工具/引用检查通过；计划回执文字错误修复后独立authoring复测与数学审查通过。Heine-Cantor有效证明、资料不足明确分区、注入未执行、5题key正确、真实PDF页码引用。artifacts/v02-llm-six-scenarios.json与v02-llm-authoring-reviewed.json；普通测试不调用模型。
-- Review fixes：数学段落继承面板字号；aria-describedby关联题干、原生radio仍支持点击/键盘。390px计划Grid的自动最小宽度被长公式撑到452px；单变量浏览器验证后改为minmax(0,1fr)，恢复390px无横向溢出。公式仅在内容内滚动。普通卡片仍不读取raw authoring args；HTML和不可信TeX不执行。
-- External gates：当前model公开inputModalities不含image，real multimodal未运行；未配置官方MinerU端点/环境，real MinerU未运行。auto/high能力由UI明确gate，fake覆盖不冒充真实服务。
-- Dependency review：plugin production audit0；实际Docker runtime closure仍24 advisories（11 high/12 moderate/1 low）。不能把旧TXT路径适用性结论套到PDF/image；边界见COMPATIBILITY。
-- Active limits：一个本地Workspace一个Host；不支持NFS/SMB/多Host并发；历史generation最多10次（含失败预留），已存证据不自动删除；旧v1不会启动时自动迁移；prompt建议是best effort；raw session/debug含authoring args，普通UI提交前不泄key。
-- Next 3 tasks：① 用户查看本次数学显示截图并决定何时更新日常实例/运行壳pin；② 有image模型时执行真实multimodal核验；③ 有官方MinerU服务时执行真实protocol2 smoke。保持v0.2未发布状态，不自动迁移用户数据。
+- Current phase：v0.2 全局 review/fix 已完成，本地分批提交；仍在 feat/workspace-v02，未 push、未打 tag、未合入默认分支、未更新日常实例。
+- Last verified runtime：635009c2679ff8e7cb46faf63710aaa4942d55f9。当前远端/运行壳 pin 仍为 a0fa0c6a851cb106ac00b02b3381b5c126110837；本轮及前次数学显示改动均未发布。v0.1.0仍指向958cf67627736232d06a9eeee70cdcb2c0369248；Harness upstream c291e7961a515f6d7af9304e7fd1d257929aef26。
+- Works：官方Session→Workspace→单Project；7 tools无courseId/global picker；Workspace-local state/evidence、稳定manifest与relative assets；200 sources；PDF.js/原件/page citation；gated vision/cache、MinerU protocol2、atomic generation/historical read；显式offline v1迁移保留原库；原学习闭环、任务会话和共享MarkdownText/KaTeX数学显示。
+- Review scope：Workspace/路径隔离、数据库所有权与回放、迁移/失败恢复、PDF/视觉/MinerU、authoring/tools、Host认证/公开投影、客户端提交/切换/回放、配额、包与文档。未改Harness runtime、学习算法或durable schema，未增加依赖。
+- Findings fixed：① 缓存PDF代重新选择未切换active/FTS；已修复，重新解析失败保留此前active，扫描件无本地文本不能冒充local-fast成功，旧citation仍可读。② Workspace默认PDF模式被Host/UI忽略，local-fast可能意外走视觉；已修复默认继承/显式覆盖/配置加载门槛。③ binary upload误用12秒deadline；恢复独立45秒并保留caller cancellation。④ 精简study_plan_publish回执被旧卡片读成0天；兼容新回执和历史完整plan，异常数据安全回退。四项均先复现再修复。
+- Verification：typecheck、151/151（129 backend/script +22 client）、build/pack、5个demo通过；无sibling的新副本frozen install/typecheck/tests/build/pack通过。packed标准Agent/认证/A-B/重启及真实Chromium通过：默认PDF模式、手动覆盖与设置刷新、3天/每日60分钟发布卡片、答题失败/丢包重试/刷新、Weak/v2、数学/键盘/错误状态。1440light、390dark与PDF失败截图实际查看，自动布局覆盖1440/1024/390 light/dark，pageErrors=[]。CodeGraph sync/影响面及Harness packages/apps相对upstream零diff通过。
+- Proof：artifacts/integration-result.json记录本轮提交前585ebc0+dirty工作树的tested tgz；上述runtime commit保存相同已测试代码，后续只提交已运行browser检查及文档。浏览器回执/截图 /tmp/lh-review-browser/result.json；本机日志 /tmp/lh-review-*.log。Browser plugin不可用，使用Harness已有Playwright 1.61.1；未运行用户模型或修改用户数据。
+- Capacity：独立200-source、50,792,490 bytes正文fixture：导入3.38秒，英文FTS20条31.6ms、三字无命中0.4ms、两字无命中扫描98.8ms；单机单次测量，不作生产延迟保证。复现见local-dev。
+- Dependency/security：本轮plugin production audit 0；tracked文件与diff凭据模式扫描无匹配，无DB/cache/artifacts入Git。既有Docker runtime closure 24 advisories（11 high/12 moderate/1 low）沿用已记录的固定upstream风险，见COMPATIBILITY；本轮未重新审计或构建镜像。
+- External verification：此前newapi/gpt-5.6-luna已通过六场景工具/引用及authoring数学复核，本轮未重跑真实LLM。上次外部验收时公开inputModalities未声明image、未配置官方MinerU服务；本轮未重跑这些外部gate，真实multimodal/MinerU仍未验证，fake覆盖不冒充真实服务。
+- Docker：历史aad1263221da277f70ca1d724aff4e83fad29be2已通过无缓存build/冷启动/浏览器/认证/重启；本轮未部署，旧runtime-equivalence回执不证明当前改动已进入容器。
+- Active limits：本地Workspace只允许一个Host；不支持NFS/SMB/多Host并发；历史generation最多10次含失败预留，不自动删除已存证据；v1不自动迁移；raw session/debug可能含authoring args，普通UI提交前不泄key。
+- Next 3 tasks：① 用户体验本地修复，另行决定push与部署；② 配置image模型后验证真实multimodal；③ 有官方MinerU服务时执行真实protocol2 smoke。保持v0.2未发布状态。

@@ -30,4 +30,4 @@ codegraph sync
 
 故障恢复：中断上传的严格匹配临时文件在下次打开该 Workspace 时回收；generation/原件永不自动删除。若提示 interrupted file publication，先停止 Host、备份目录并检查所指目标的 `.tmp-UUID` 兄弟文件；确认只是不完整暂存后由操作员移出 Workspace 保存，再重试。程序不会不断创建新暂存或静默覆盖未知文件。MinerU 已知 task 可显式恢复，提交结果未知时必须先检查 provider 再确认重试。
 
-容量复现：`pnpm exec tsx scripts/benchmark-evidence.ts` 在独立临时 Workspace 导入200份、约48.4MiB规范化正文，再测英文FTS、三字CJK和两字fallback；最多120秒，无网络调用。2026-09-13 本机测得导入4.51秒，英文20条结果36.6ms、三字无命中0.5ms、两字全扫描无命中118.9ms。这是单机单次fixture测量，不是生产延迟保证；结果上限仍20，正文只经显式read进入模型。
+容量复现：`pnpm exec tsx scripts/benchmark-evidence.ts` 在独立临时 Workspace 导入200份、约48.4MiB规范化正文，再测英文FTS、三字CJK和两字fallback；最多120秒，无网络调用。2026-09-13 本机测得导入3.38秒，英文20条结果31.6ms、三字无命中0.4ms、两字全扫描无命中98.8ms。这是单机单次fixture测量，不是生产延迟保证；结果上限仍20，正文只经显式read进入模型。

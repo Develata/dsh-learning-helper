@@ -134,6 +134,9 @@ export async function browserSmoke({ web, harness, plugin, work, workspacePath, 
     })) }, true);
     for (let i = 0; i < 10 && await page.locator('[data-turn-process][aria-expanded=false]').count(); i++) await page.locator('[data-turn-process][aria-expanded=false]').first().click();
     assert.ok(await page.locator('.lh-tool-card .katex').count() > 0, 'outline tool card renders math');
+    const planCard = page.locator('.lh-tool-card').filter({ hasText: '3 天学习计划 · 发布时 v1' });
+    await planCard.waitFor();
+    assert.deepEqual(await planCard.locator('li').allTextContents(), ['Day 1 · 60 分钟', 'Day 2 · 60 分钟', 'Day 3 · 60 分钟']);
     const card = page.getByRole('region', { name: '课程练习工具卡片' });
     await card.getByText('5 题练习已生成', { exact: true }).waitFor();
     assert.doesNotMatch(await card.innerHTML(), /correctOption|explanation|SECRET_EXPLANATION_934|Inspect|argsRaw/);
@@ -266,11 +269,17 @@ export async function browserSmoke({ web, harness, plugin, work, workspacePath, 
     await chooseWorkspace(cwd);
     await panel.getByRole('heading', { name: '当前计划 · v2', exact: true }).waitFor();
     // Binary PDF upload exercises the shipped Worker and parser, with capability-gated UI.
+    const configUrl = `/learning-helper/v2/sessions/${sessionId}/config`;
+    const config = await (await web.get(configUrl)).json();
+    config.documentParsing.pdfMode = 'local-fast';
+    assert.equal((await web.post(configUrl, config)).status, 200);
     await panel.getByRole('button', { name: '资料', exact: true }).click();
     const { makePdf } = await import('../tests/pdf-fixture.ts');
     const pdf = makePdf([{ text: 'Uniform continuity on compact intervals. Original PDF page evidence.' }, { text: 'A second page contains epsilon and delta in a mathematical statement.' }]);
     await panel.locator('input[type=file]').setInputFiles({ name: 'browser-lecture.pdf', mimeType: 'application/pdf', buffer: Buffer.from(pdf) });
-    await panel.getByRole('radio', { name: /本地快速/ }).check();
+    await panel.getByText('配置 MinerU API', { exact: true }).waitFor();
+    assert.equal(await panel.getByRole('radio', { name: /本地快速/ }).isChecked(), true, 'PDF mode inherits workspace default');
+    await panel.getByRole('radio', { name: /自动/ }).check();
     await panel.getByRole('button', { name: '上传资料', exact: true }).click();
     const pdfRow = panel.locator('.lh-sources li').filter({ hasText: 'browser-lecture.pdf' });
     await pdfRow.getByText('Ready · 就绪', { exact: true }).waitFor({ timeout: 30_000 });
@@ -281,6 +290,7 @@ export async function browserSmoke({ web, harness, plugin, work, workspacePath, 
     await panel.getByLabel('启用 MinerU', { exact: true }).check();
     await panel.getByRole('button', { name: '保存配置', exact: true }).click();
     await pdfRow.getByRole('button', { name: '优化为长期 Markdown', exact: true }).click();
+    assert.equal(await panel.getByRole('radio', { name: /自动/ }).isChecked(), true, 'settings refresh must not reset the explicit upload mode');
     await pdfRow.getByText(/长期 Markdown 转换失败/).waitFor();
     await pdfRow.getByText('Ready · 就绪', { exact: true }).waitFor();
     for (const checkbox of await panel.locator('input[type=checkbox]').all()) { const box = await checkbox.boundingBox(); assert.ok(box && box.width <= 24 && box.height <= 24, 'Checkbox must not inherit full-width text input styling'); }
