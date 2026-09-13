@@ -109,7 +109,7 @@ try {
   let first; let citationRead; let authored;
   const web = await boot();
   try {
-    if (process.env.LH_BROWSER_SMOKE !== '0') { await browserSmoke({ web, harness, plugin, work }); receipts.push('real browser: native Learning panel and student learning loop'); }
+    if (process.env.LH_BROWSER_SMOKE !== '0') { await browserSmoke({ web, harness, plugin, work, branding: process.env.LH_BRAND_SMOKE === '1' }); receipts.push('real browser: native Learning panel and student learning loop'); }
     const course = await web.post('/learning-helper/v1/courses', { id: 'evidence-smoke', title: '数学分析', subject: 'calculus', dailyMinutes: 60 });
     assert.equal(course.status, 201);
     assert.equal((await (await web.get('/learning-helper/v1/courses/evidence-smoke/state')).json()).plan, null);

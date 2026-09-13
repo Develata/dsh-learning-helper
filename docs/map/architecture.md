@@ -25,6 +25,7 @@
 | `tests/learning.test.ts` / `tests/adaptation-boundaries.test.ts` / `tests/http.test.ts` | 状态、重规划边界与 HTTP 行为证明 |
 | `src/services/student.ts::studentDashboard/quizSummaries/quizResult` | 单 snapshot 派生安全学生读模型 |
 | `src/client/index.tsx::apply` | native client 注册、header/blank composer 入口、sidebar/tool slots |
+| `src/client/brand.tsx::registerLearningBrand` | 原创名称/书本标志 → 三个正式品牌 slots；静态首屏资源由 fork 拥有 |
 | `src/client/panel.tsx::LearningPanel` | 选课/分区/官方 composer 预填 → Host read models |
 | `src/client/quiz.tsx::QuizForm` | 浏览器冻结提交身份 → Host submit → result 恢复 |
 | `src/client/tool-model.ts::toolCardModel` | live/replay 安全卡片，只解析 canonical rendered result |

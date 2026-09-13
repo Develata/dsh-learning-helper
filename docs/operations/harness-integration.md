@@ -6,7 +6,7 @@
 pnpm run test:integration -- /absolute/path/to/learning-helper
 ```
 
-要求该 Harness checkout 已完成 install/build，并满足 [COMPATIBILITY](../../COMPATIBILITY.md) 的 exact upstream 基线约束。检查包括已提交、暂存、未暂存和未跟踪的源文件；只有三份发行说明和 deploy/learning-helper/ 可与基线不同。修改运行时代码后必须先审查并更新基线，不能绕过检查。
+要求该 Harness checkout 已完成 install/build，并满足 [COMPATIBILITY](../../COMPATIBILITY.md) 的 exact upstream 基线约束。检查包括已提交、暂存、未暂存和未跟踪的源文件；允许三份发行说明、deploy/learning-helper/ 和已授权品牌分支的确切 allowlist，其余源码变化拒绝。修改运行时代码后必须先审查并更新基线，不能绕过检查。
 
 脚本自行 build/pack 插件，经 `dsh plugin add` 安装 tgz 到临时 Web profile，仅为生成后的 profile 添加 pnpm exact version。随后 dump config、启动两个先后独立 Web 进程，验证认证、资源、空 Course/TXT-MD 导入、standard Agent 作用域中七个 tools 的 canonical dispatch、grounding section、outline/plan/quiz 发布、学生提交与双 DB 重启后的幂等恢复。端口由 OS 分配；每条 Git 基线命令最多 10 秒，其他命令最多 120 秒，启动等待最多 45 秒，停止超时 5 秒终止进程组。每个子进程仅保留最近 1,048,576 个日志字符。临时 DSH_HOME 在退出时删除。
 
@@ -30,3 +30,5 @@ bundle 保留默认 json domain backend，只将 learning_helper 路由到 SQLit
 Evidence DB 路径由插件 Config.evidencePath 注入，bundle 使用 dshHomePath。不要指向 state.db；未知 schema/损坏会拒绝启动，应先保全原文件并诊断，不删除重建。processing 重启变 failed/interrupted；同内容显式重导会复用身份。若 SQLite 锁导致失败状态也无法写入，解除锁后重导可接管本 Host 已退出的导入。
 
 `tools`/`systemPrompt` 是必需公开服务；bundle 启用四读、三发布工具，无额外 preset patch。自定义 complete system-prompt/preset 可能遮蔽该 section，必须在自己的 composition 中验证实际 assembled prompt。smoke 的临时 test probe 只允许这七个工具的注册检查与 dispatch，并可将确定性 call/result 写入专用测试 session 以验收实际 replay/tool views，不包含在 tarball 或正常 profile。
+
+品牌分支验证：两仓同名 `feat/learning-helper-brand`，fork 位于独立 checkout 后执行 `pnpm run build`。在插件仓库运行 `LH_BRAND_SMOKE=1 pnpm run test:integration -- /absolute/path/to/learning-helper-brand`，使用隔离 DSH_HOME、packed plugin 和真实 Chromium 检查品牌与学习闭环；不连接现有实例。现有 Docker lock 继续固定发布的 v0.1.0，不能用旧容器推断品牌分支已生效。

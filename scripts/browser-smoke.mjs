@@ -10,7 +10,7 @@ async function deadline(promise, label) {
 }
 
 /** Actual packed Web + shipped Chromium. Fixture tools replace only the unavailable LLM. */
-export async function browserSmoke({ web, harness, plugin, work, workspacePath, screenshotsPath }) {
+export async function browserSmoke({ web, harness, plugin, work, workspacePath, screenshotsPath, branding = false }) {
   const screenshots = screenshotsPath ?? join(plugin, 'artifacts', 'browser'); await mkdir(screenshots, { recursive: true });
   await writeFile(join(screenshots, 'result.json'), JSON.stringify({ status: 'running', startedAt: new Date().toISOString() }));
   const require = createRequire(join(harness, 'apps/web/package.json'));
@@ -23,8 +23,42 @@ export async function browserSmoke({ web, harness, plugin, work, workspacePath, 
   const errors = []; page.on('pageerror', e => errors.push(e.message));
   try {
     await page.goto(web.base, { waitUntil: 'load' });
+    await page.locator('[data-learning-helper-brand="name"]').waitFor({ state: 'attached' });
+    if (branding) {
+      assert.equal(await page.title(), 'Learning Helper');
+      await page.getByRole('dialog', { name: '欢迎使用 Learning Helper' }).waitFor();
+      assert.doesNotMatch(await page.locator('body').innerText(), /DSH|DeepSeek Harness|深度求索/);
+      const manifest = await (await web.get('/manifest.webmanifest')).json();
+      assert.equal(manifest.name, 'Learning Helper'); assert.equal(manifest.short_name, 'Learning Helper');
+      const favicon = await (await web.get('/favicon.svg')).text();
+      assert.ok(favicon.includes('viewBox="0 0 32 32"'));
+      await page.screenshot({ path: join(screenshots, 'branding-welcome.png'), fullPage: true });
+    }
     await page.getByRole('button', { name: '继续', exact: true }).click();
     await page.getByRole('button', { name: '稍后配置', exact: true }).click();
+    if (branding) {
+      assert.ok(await page.locator('[data-learning-helper-brand="mark"]').count() >= 2, 'sidebar and hero use the learning mark');
+      await page.screenshot({ path: join(screenshots, 'branding-home.png'), fullPage: true });
+      await page.getByRole('button', { name: '收起侧边栏', exact: true }).click();
+      await page.getByRole('button', { name: '打开侧边栏', exact: true }).waitFor();
+      await page.waitForFunction(() => !document.querySelector('[data-learning-helper-brand="name"]'));
+      assert.ok(await page.locator('[data-learning-helper-brand="mark"]').count() >= 2, 'collapsed sidebar retains the learning mark');
+      await page.getByRole('button', { name: '打开侧边栏', exact: true }).click();
+      await page.waitForFunction(() => (document.querySelector('[data-learning-helper-brand="name"]')?.closest('button')?.parentElement?.parentElement?.getBoundingClientRect().width ?? 0) >= 270);
+      for (const [width, theme] of [[1440, 'dark'], [1024, 'light'], [390, 'light']]) {
+        if (width === 390) {
+          // Use the shell's existing collapse action on narrow screens.
+          await page.getByRole('button', { name: '收起侧边栏', exact: true }).click();
+          await page.waitForFunction(() => !document.querySelector('[data-learning-helper-brand="name"]'));
+        }
+        await page.setViewportSize({ width, height: 1000 }); await page.emulateMedia({ colorScheme: theme });
+        await page.mouse.move(width - 1, 100);
+        await page.screenshot({ path: join(screenshots, `branding-home-${width}-${theme}.png`), fullPage: true, animations: 'disabled' });
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2));
+      }
+      await page.setViewportSize({ width: 1440, height: 1000 }); await page.emulateMedia({ colorScheme: 'light' });
+      await page.getByRole('button', { name: '打开侧边栏', exact: true }).click();
+    }
     await page.getByRole('textbox', { name: '选择工作区', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: '选择工作区目录' });
     await dialog.getByRole('button', { name: '编辑路径', exact: true }).click();
@@ -212,6 +246,7 @@ export async function browserSmoke({ web, harness, plugin, work, workspacePath, 
     assert.deepEqual(errors, []);
     await writeFile(join(screenshots, 'result.json'), JSON.stringify({ status: 'passed', browser: require('playwright/package.json').version,
       courseId, quizId: published.quiz.id, checks: ['create/upload/dedupe','native slots','composer prefill','real tool dispatch and replay cards',
+        ...(branding ? ['Learning Helper title/welcome/manifest/favicon', 'brand slots expanded/collapsed and responsive light/dark'] : []),
         'pre-submit public payload and DOM key isolation','submit failure and lost-response retry','weak/v2/revision evidence','refresh feedback','dashboard/source failure recovery','course switch cancels stale response','keyboard radios','long Chinese and math concept names','responsive light/dark geometry; native fullscreen at 1024px'],
       viewportWidths: [1440,1024,390], pageErrors: errors, semanticLlmRun: false }, null, 2));
   } catch (error) {

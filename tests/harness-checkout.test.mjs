@@ -50,3 +50,13 @@ for (const mode of ['committed', 'staged', 'unstaged', 'untracked']) test(`runti
   if (mode === 'committed') git('commit', '-m', 'test runtime drift');
   await assert.rejects(verifyHarnessCheckout(path, base), /runtime differs/);
 });
+
+test('branding exception stays limited to the reviewed presentation files', async t => {
+  const { path, base } = await checkout(t);
+  await mkdir(join(path, 'apps/web/public'), { recursive: true });
+  await writeFile(join(path, 'apps/web/public/favicon.svg'), '<svg/>');
+  assert.equal(await verifyHarnessCheckout(path, base), base);
+  await mkdir(join(path, 'packages/client/ui-conversation/src/client'), { recursive: true });
+  await writeFile(join(path, 'packages/client/ui-conversation/src/client/index.ts'), 'unexpected implementation change');
+  await assert.rejects(verifyHarnessCheckout(path, base), /runtime differs/);
+});

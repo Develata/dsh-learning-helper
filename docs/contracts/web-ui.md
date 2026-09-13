@@ -23,3 +23,5 @@ POST `/courses` 接收严格 Course draft（id/title/subject/examAt?/dailyMinute
 P2 Source API：POST `/courses/:courseId/sources/text` 接收 `{ filename, mimeType: "text/plain" | "text/markdown", text }`（UTF-8 JSON，不用 base64），返回 201 `{ source, deduplicated: false }` 或重复时 200；GET `/courses/:courseId/sources` 返回 `{ sources }`，包含失败状态以便重导。Source body 独立 4 MiB、10 秒，与 [Evidence content 上限](evidence.md) 分开；断开会取消在途解析。GET `/courses/:courseId/evidence/search?query=...&limit=5` 和 POST `/courses/:courseId/evidence/read`（`{ chunkIds }`）返回同 application canonical output；Agent 本身直接调用 service。没有 Source 删除接口。
 
 quiz_publish 的会话文本现在是 courseId/quizId/itemCount/openIn 摘要；卡片兼容该回执和历史完整 public-quiz JSON，未知/越界值保持安全通用入口。即时 ToolRuntime canonical value 仍保留完整 public quiz。浏览器不能假设 canonical value 会替代会话中的 rendered content。
+
+品牌：三个正式 brand slots 使用 Learning Helper 名称与原创书本标志；注册随 slot declaration / plugin 生命周期清理，priority -10 覆盖官方品牌，不接管导航、模型设置或数据。fork 拥有初始 HTML/title、favicon、Web App manifest 和不支持覆盖的双语产品文案。真实供应商名、技术标识与 OSS 署名不作为产品名称替换。

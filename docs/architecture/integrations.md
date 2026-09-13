@@ -11,7 +11,7 @@
 | UPSTREAM | `DomainFacility.open` / `KvTable.update`：`packages/storage/storage-domain/src`；SQLite：`packages/storage/storage-sqlite/src` |
 | UPSTREAM | Agent `defineTool` / tools registry：`packages/core/tools`；per-session preset：`packages/preset/agent-presets` |
 | UPSTREAM | attachment、MCP 与 extensions 保持各自语义；不以 session-query 存课程资料 |
-| PATCH | 无。Expected Harness core files modified: **0** |
+| PATCH | v0.1.0 无；后续品牌分支允许 9 个前端源码/资源文件与 11 个相应测试/快照文件，精确清单由 fork UPSTREAM_PATCHES.md 拥有；Agent/Host/学习逻辑不改 |
 | NEW | Learning domain/policy/services/providers/host/tools/client 与控制文档 |
 | OPTIONAL | OpenFile/MinerU；不阻塞第一轮闭环 |
 
@@ -29,6 +29,6 @@ PDF/MinerU、NotebookLM → EvidenceProvider、Obsidian → LearningExportSink�
 
 P3 复用上述公开 API：Host 全局注册七工具（四读、三发布），standard Agent preset 继承。CourseAuthoringService 通过 EvidenceService 验证引用后调用 LearningService，不改变作用域、数据库所有权或 Harness runtime；源码定位见 [map](../map/architecture.md)。数学分析 guidance 仅提供教学规则，不建立领域专用 service。
 
-P4 使用固定版本的 `ClientModuleRegistry` / `dsh.client`：`./client` 指向 dist/client.js，esbuild 生成当前 lazy CommonJS factory 格式。Harness 的 clientBundle preset 未公开发布（docs/cookbook/adding-a-settings-card.md），插件内仅实现其 artifact wrapper，不复制旧 teacher bundle。React/primitives 由平台共享；其余注入只用于正式 client module 加载顺序。
+P4 使用固定版本的 `ClientModuleRegistry` / `dsh.client`：`./client` 指向 dist/client.js，esbuild 生成当前 lazy CommonJS factory 格式。Harness 的 clientBundle preset 未公开发布（docs/cookbook/adding-a-settings-card.md），插件内仅实现其 artifact wrapper，不复制旧 teacher bundle。React/primitives 由平台共享；其余依赖声明描述 client module 关系；实际激活等待 Cordis service，slot 贡献通过 slots.inject 等待声明。
 
 原生 `sidebarRightTabs.register` + `sidebar.right.pane.tab` 挂 Learning 页面，`sidebarRight.openTab` 导航；header.actions 与空会话 input.left 挂入口，`inputActions.setDraft` 保留学生发送确认。四个 keyed `tool.call.toolview` 替代 raw authoring cards，live/replay 都只读。注册与 scoped CSS 均由 Cordis effect 释放，没有 apps/web、router 或独立 drawer。

@@ -11,6 +11,7 @@ import { LearningToolCard } from './tool-views.js';
 import { learningToolNames } from './tool-model.js';
 import type { Navigation } from './types.js';
 import css from './styles.css';
+import { registerLearningBrand } from './brand.js';
 export const inject = ['slots', 'sidebarRightTabs', 'sidebarRight'];
 const TAB = 'learning-helper';
 declare module '@deepseek-ai/dsh-client-ui-sidebar-right/client' {
@@ -24,6 +25,7 @@ function PanelSeat({ useTabInfo, inputActions, useInput }: PropsRuntime<'sidebar
 }
 /** One native client plugin; every registration/style owns a Cordis disposer. */
 export function apply(ctx: Context): void {
+  registerLearningBrand(ctx);
   ctx.effect(() => { const tag = document.createElement('style'); tag.dataset.pluginCss = 'learning-helper'; tag.textContent = css; document.head.append(tag); return () => tag.remove(); });
   ctx.effect(() => ctx.sidebarRightTabs.register({ id: TAB, kind: TAB, title: () => '学习',
     guide: [{ order: 10, title: () => '学习', description: () => '课程资料、练习与自适应复习计划' }] }));

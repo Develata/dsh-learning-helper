@@ -57,7 +57,7 @@ Learning Helper 有意作为 DeepSeek Harness plugin 构建，复用成熟 Agent
 | Web shell、Plugin runtime、Client slots | Course/Plan/Progress/Quiz 学生学习界面 |
 | Storage infrastructure | 学习状态不变量、确定性评分与重排策略 |
 
-Agent 用工具推理；`evidence.db` 保存 Source/Chunk/FTS；Harness `state.db` 保存学习事实。LLM 提出 draft，应用层验证并发布；LLM 不写 mastery、不评分，也不覆盖自动修订的计划。Harness `packages/`、`apps/` 的 runtime patch 验收门槛为 **0**。插件保持一个独立 npm package，无 sibling checkout 也可 install/build/test/pack。
+Agent 用工具推理；`evidence.db` 保存 Source/Chunk/FTS；Harness `state.db` 保存学习事实。LLM 提出 draft，应用层验证并发布；LLM 不写 mastery、不评分，也不覆盖自动修订的计划。发布的 v0.1.0 保持 Harness `packages/`、`apps/` **0 patch**；当前本地品牌分支仅增加已登记的 UI 呈现差异，见 [集成边界](docs/architecture/integrations.md)。插件保持一个独立 npm package，无 sibling checkout 也可 install/build/test/pack。
 
 ## 演示与验证
 

@@ -5,7 +5,8 @@
 | Capability | Status | Proof / Test | Demo step |
 |---|---|---|---|
 | CodeGraph 双仓初始化 | verified | 1.6.0 init/status，插件实现后 sync | Agent 导航 |
-| Harness core patch = 0 | verified | `git diff --name-only`：packages/apps 无变更；[audit](../architecture/integrations.md) | 安装 |
+| 发布的 v0.1.0 Harness patch = 0 | verified | 冻结版本的 packages/apps 无变更；后续品牌分支差异见 [audit](../architecture/integrations.md) | 安装 |
+| Learning Helper 品牌（本地分支） | verified | LH_BRAND_SMOKE=1 packed Chromium：title/welcome/manifest/favicon、三个 brand slots、收起/展开、1440 light/dark、1024、390；原生学习闭环继续通过。未部署到现有容器 | 打开 |
 | Bundle 独立 install/typecheck/build/pack | verified | 独立临时副本中 install/typecheck/test/build/pack；运行与测试数见 CURRENT，tgz 含 dist/manifest/docs | 打开 |
 | Fixture 5 题确定性 adaptation | verified | `tests/learning.test.ts`：两错→weak→review→v2；预算与旧计划保留 | 提交→Day 2 |
 | 幂等/并发/故障/恢复 | verified | 相同提交不再写；不同 quiz 并发无丢失；SQLite lock 整体失败；新 Node 进程恢复 | 反馈持久化 |

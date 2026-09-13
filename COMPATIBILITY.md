@@ -2,7 +2,7 @@
 
 Plugin 0.1.0 的 P1–P5 backend/client/delivery 已测试于 Harness **0.1.5-rc.2**，exact SHA `c291e7961a515f6d7af9304e7fd1d257929aef26`。Node **24.18.0**；开发/packed profile pnpm **11.7.0**。
 
-P5 开工 fork HEAD：`e56ee57feb140241be6ce9ac9559e83854f7e6ac`。运行时仍固定上述 upstream SHA；后代提交仅允许根目录 `LEARNING_HELPER.md`、`UPSTREAM_BASE.md`、`UPSTREAM_PATCHES.md` 和 `deploy/learning-helper/` 发行层变化。其余 tracked/untracked 源文件必须与基线一致；实际运行 HEAD 与包摘要写入验收回执。
+P5 开工 fork HEAD：`e56ee57feb140241be6ce9ac9559e83854f7e6ac`。运行时仍固定上述 upstream SHA；后代提交仅允许根目录 `LEARNING_HELPER.md`、`UPSTREAM_BASE.md`、`UPSTREAM_PATCHES.md` 和 `deploy/learning-helper/` 发行层变化。以上为冻结版本约束。用户授权的 `feat/learning-helper-brand` 后续分支额外允许 9 个前端源码/资源文件与 11 个匹配测试/快照文件；精确 allowlist 在 `scripts/harness-checkout.mjs`，其余 tracked/untracked 源文件仍必须与基线一致。实际运行 HEAD 与包摘要写入验收回执，dirty branch 的验证不等同已发布新版本。
 
 验证：独立 build/typecheck/test/pack；local link install；prebuilt tarball install + config dump + authenticated Web HTML/JS/CSS + Host Course/import + standard Agent 作用域七工具 dispatch + prompt assembly + grounded authoring + P1 submit + 双 DB process restart。另通过 packed Web 的 Learning 入口、课程上传、交互 Quiz、反馈/刷新、Why changed 与 native tool cards 浏览器验收；真实模型、Docker 与发布结果分别见 [最终验收](docs/acceptance/final-delivery.md)。详细能力证据见 [acceptance](docs/acceptance/matrix.md)。
 
