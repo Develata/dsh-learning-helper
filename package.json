@@ -1,6 +1,6 @@
 {
   "name": "dsh-learning-helper",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Persistent, evidence-driven adaptive learning for DeepSeek Harness",
   "type": "module",
   "license": "MIT",

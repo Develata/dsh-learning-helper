@@ -33,14 +33,14 @@ flowchart LR
 
 </details>
 
-以上为当前 v0.2 开发版的真实 Harness Web 录屏与截图。检索、发布、作答和重排使用实际安装的插件；课程结构与题目由确定性 fixture 提供，**本视频不代表自主 LLM 验收**。模型验收和发布状态见 [CURRENT](docs/CURRENT.md)。
+以上为v0.2 系列的真实 Harness Web 录屏与截图。检索、发布、作答和重排使用实际安装的插件；课程结构与题目由确定性 fixture 提供，**本视频不代表自主 LLM 验收**。模型验收和发布状态见 [CURRENT](docs/CURRENT.md)。
 
 ## 学习体验
 
 - 在当前 Harness Workspace 启用学习项目；切换 Workspace 自动切换独立资料和学习状态。
 - TXT/Markdown canonical assets；PDF.js 本地快速解析、不可变 PDF archive、真实页码引用。
 - 自动/高精度解析复用 Harness image-capable model；未声明视觉能力时明确禁用，不伪装成功。
-- 可选外部官方 MinerU protocol 2：异步转长期 Markdown，原子切换当前 representation，历史引用持续可读。
+- v0.2.2 支持 mineru.net 云端 API、Web 密钥配置与外部官方 MinerU protocol 2，见 [配置说明](docs/operations/mineru.md)。转换后原子切换当前 representation，历史引用持续可读。
 - 七个 session-bound tools 完成检索、阅读、grounded outline/plan/quiz、原件按需核验；Agent 不提交 courseId 或路径。
 - 原生 Learning 面板：计划、进度、交互 MCQ、解释/刷新恢复、任务独立学习会话。
 - 题目、选项、解析和计划支持 Markdown/LaTeX 数学公式；长公式可在窄屏内横向滚动。
@@ -50,18 +50,18 @@ flowchart LR
 
 ## 快速开始
 
-v0.2.1 已通过两个仓库的同名 tag CI 发布；默认分支和 v0.1.0 保持原有版本。可直接匿名拉取 **linux/amd64** 镜像，无需本机构建或安装 Node/pnpm：
+正式版本统一到 `main`，v0.1.0 / v0.2.0 / v0.2.1 历史 tag 保留。v0.2.2 的安装包与 **linux/amd64** 镜像由两个仓库同名 tag CI 验收后发布；产物状态见 [Release](https://github.com/Develata/learning-helper/releases/tag/v0.2.2)，无需本机构建或安装 Node/pnpm：
 
 ```bash
-docker pull ghcr.io/develata/learning-helper:0.2.1
+docker pull ghcr.io/develata/learning-helper:0.2.2
 ```
 
-推荐下载 [运行壳 Release](https://github.com/Develata/learning-helper/releases/tag/v0.2.1) 附带的 Compose，它固定到验收镜像的 SHA-256 digest，并保留 `/data`、Workspace 和 `127.0.0.1:3010`：
+推荐下载 [运行壳 Release](https://github.com/Develata/learning-helper/releases/tag/v0.2.2) 附带的 Compose，它固定到验收镜像的 SHA-256 digest，并保留 `/data`、Workspace 和 `127.0.0.1:3010`：
 
 ```bash
 mkdir learning-helper-deploy
 cd learning-helper-deploy
-curl -fL https://github.com/Develata/learning-helper/releases/download/v0.2.1/compose.yml -o compose.yml
+curl -fL https://github.com/Develata/learning-helper/releases/download/v0.2.2/compose.yml -o compose.yml
 docker compose pull
 docker compose up -d
 docker compose exec learning-helper node /opt/learning-helper/open.mjs
@@ -69,7 +69,7 @@ docker compose exec learning-helper node /opt/learning-helper/open.mjs
 
 打开最后一条命令返回的本机登录地址，在 Harness 模型设置配置 provider，选择/创建本地 Workspace，随后打开“学习”面板。凭证仅在运行时配置。GHCR 首次建包默认私有，维护者须在包设置中改为 Public 才能匿名拉取；若返回 denied，见[发布与排障](docs/operations/release.md)。已有 v0.1 数据先按迁移说明备份和迁移，不能直接覆盖旧实例。
 
-需要源码构建、修改端口或自定义挂载时，见[部署说明](https://github.com/Develata/learning-helper/blob/feat/workspace-v02/deploy/learning-helper/README.zh.md)。开发与本地链接仍见 [local-dev](docs/operations/local-dev.md) / [Harness integration](docs/operations/harness-integration.md)。
+需要源码构建、修改端口或自定义挂载时，见[部署说明](https://github.com/Develata/learning-helper/blob/main/deploy/learning-helper/README.zh.md)。开发与本地链接仍见 [local-dev](docs/operations/local-dev.md) / [Harness integration](docs/operations/harness-integration.md)。
 
 ## 原创贡献与复用
 
@@ -108,7 +108,7 @@ pnpm acceptance:llm -- /absolute/path/to/learning-helper
 
 v0.2 改为 Workspace 本地存储；旧全局 Course 数据不自动迁移。先备份、停写，按[迁移说明](docs/operations/migration-v1.md)迁移单门课程，验证后再切换；v0.1.0 tag 保持可恢复。
 
-本地单用户/单Host；不支持NFS/SMB或云盘同步SQLite。PDF单文件64MiB，Workspace200份资料、100份提醒；视觉最多64页/次，原件查看1–4页。MinerU是可选外部服务，需要官方自托管protocol2；不内置Python/OCR模型，不声称兼容SaaS v4。模型和外部Provider的真实验收见CURRENT，普通tests只使用fake provider。
+本地单用户/单Host；不支持NFS/SMB或云盘同步SQLite。PDF单文件64MiB，Workspace200份资料、100份提醒；视觉最多64页/次，原件查看1–4页。MinerU是可选外部服务；支持官方自托管protocol2与mineru.net SaaS v4，不内置Python/OCR模型。云端单文件最多200页，API密钥在资料面板配置并由主机凭据服务保存。模型和外部Provider的真实验收见CURRENT，普通tests只使用fake provider。
 
 引用/结构校验不等于数学正确性证明。未提供多用户、外部PKM、FSRS或向量服务。普通学生界面/工具卡片提交前隐藏答案，原始session/debug/export可能保留Agent作者参数，不是考试防作弊边界。固定Harness的当前传递依赖复核见[兼容性与风险边界](COMPATIBILITY.md)；不支持公网共享部署。
 

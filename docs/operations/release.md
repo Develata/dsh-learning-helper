@@ -4,9 +4,9 @@
 
 ## 两仓顺序
 
-1. 插件更新 package.json 版本，验证后提交；创建 annotated `vX.Y.Z`（预览版本可用 `-rc.N` / `-beta.N` / `-alpha.N`），先推送分支并确认远端SHA，再单独推送 tag。
+1. 插件更新 package.json 版本，验证后分批提交并合入 `main`；创建 annotated `vX.Y.Z`（预览版本可用 `-rc.N` / `-beta.N` / `-alpha.N`），先推送分支并确认远端SHA，再单独推送 tag。
 2. 插件 workflow 并行执行 tests/typecheck 与 build/demos/pack；二者通过才上传 tgz 和 SHA256SUMS 至 GitHub Release。不发布 npm，不需要 npm token。
-3. 运行壳将 versions.lock.json 的 learningHelperPluginSha 固定到插件 tag 对应 commit，更新 compose.release.yml 默认版本，提交并推送同名 annotated tag。其 preflight 检查插件 tag、exact SHA、已发布 tarball 和 base-image lock，一项不符即停止。
+3. 运行壳同样使用 `main` 为正式分支（旧 `master` 保留），将 versions.lock.json 的 learningHelperPluginSha 固定到插件 tag 对应 commit，更新 compose.release.yml 默认版本，提交并推送同名 annotated tag。其 preflight 检查插件 tag、exact SHA、已发布 tarball 和 base-image lock，一项不符即停止。
 4. 运行壳并行执行发布包/部署检查与 image build/Chromium/cold boot/restart。测试镜像通过 Actions artifact 原样交给发布 job，校验 SHA256 与 Docker image ID 后推送 GHCR；不二次编译。
 5. 从运行壳 Release 取得 image-digest.txt、固定 digest 的 compose.yml、versions.lock.json、docker-result.json 与 SHA256SUMS。下载并校验，再部署；仓库推送不重启日常实例。
 

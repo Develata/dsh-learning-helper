@@ -13,8 +13,9 @@
 | auto/high-accuracy orchestration / cache / failure | verified | pdf-pipeline使用fake vision：切回缓存代、失败保留此前active、扫描件local-fast拒绝与旧引用/重启；不证明真实模型解析质量 |
 | PDF default / per-import override / deadline | verified | workspace-http真实上传：默认local-fast不调用视觉，显式high调用；client API 45秒/取消；Chromium默认选择与配置刷新保持手动选择 |
 | original page tool bounds | verified | pdf-pipeline：非PDF/未知source/错误页/超4页拒绝；workspace tools作用域 |
-| separate parsing/assetization state | verified | pdf-pipeline：local可用时仍标解析中；MinerU不能与未结束视觉解析竞争，取消保留local |
-| MinerU official protocol2 adapter | verified | fake HTTP：health、task、poll、result、lost/failed/timeout、未知提交不自动重发 |
+| separate parsing/assetization state | verified | pdf-pipeline：local可用时仍标解析中；MinerU不能与未结束视觉解析竞争，取消保留local；packed Chromium旧警告回归先失败后通过：active MinerU隐藏旧视觉警告，local与新MinerU失败提示保留 |
+| MinerU official protocol2 adapter | verified | fake HTTP：health、task、poll、result、lost/failed/timeout、未知提交不自动重发；本轮6项旧MinerU/PDF回归通过 |
+| mineru.net SaaS v4 / ZIP / Web credentials | verified | fake HTTP cloud/ZIP/generation + 公开credentials隔离；真实packed Chromium保存/清空/刷新/移除/丢失响应重试；证明协议和界面，不证明真实SaaS账户成功 |
 | atomic generation / old citation / quotas | verified | generations、MinerU：active-only search / historical read；失败派生预留与第11次拒绝；已失败MinerU重启不改Source快照；缓存代切换同步Latin/trigram与历史read |
 | explicit v1 migration / original untouched | verified | migration：完整已评分fixture、概念/计划/练习/citations相同、重复幂等、原库hash不变 |
 | native student UI / quiz / Weak→v2 | verified | packed Chromium：初始化/上传/工具卡片/键盘作答/丢包重试/刷新/错误恢复 |
@@ -24,9 +25,11 @@
 | long Chinese / final visual / soft-warning UI | verified | Chromium 1440/1024/390 light/dark截图；100条source投影；checkbox尺寸断言与PDF错误状态 |
 | actual Harness LLM workspace QA / PDF | verified | 2026-09-13 newapi/gpt-5.6-luna实际search/read和准确citation；六场景与后续authoring回执的各自语义范围见 [golden path](golden-path.md#真实模型语义验收) |
 | actual Harness outline/plan/quiz v0.2 | verified | 同日真实publish；计划口述不一致修复后，单独plan/quiz复验通过；不是最新checkout重新运行全场景 |
-| actual multimodal / real MinerU | blocked | 最近外部验收时模型未声明 image、未配置官方 MinerU；本轮未重查运行环境或重跑服务 |
-| standalone / final full regression | verified | 无sibling的新副本 frozen install/typecheck/156 tests/build/pack；本地5个demo和packed restart |
+| actual multimodal | blocked | 视觉最近验收仍无image声明；不把MinerU云端成功当作Harness视觉模型验收 |
+| actual mineru.net SaaS | verified | 用户在隔离预览输入key并完成24页PDF；只读复核471个active chunks、24页locator、原件checksum、canonical文件、Host search/read/citation；未逐页检查数学质量，未发布至GHCR |
+| standalone / final full regression | verified | 无sibling的新副本 frozen install/typecheck/165 tests/build/pack；本地5个demo和packed restart |
 | Docker cold boot/restart at aad1263 | verified | 已保存的no-cache/new-volume/Chromium/auth/restart回执；与此前a0fa0c6运行文件等价，不覆盖后续本地修复 |
+| Docker MinerU 本地预览 | verified | 固定v0.2.1基础镜像 + 已测tgz；非root、鉴权、cloud设置真实Chromium、本地PDF、资料/凭据重启持久化；不代表GHCR已发布cloud构建 |
 | Docker / GHCR v0.2.1 | verified | [镜像CI](https://github.com/Develata/learning-helper/actions/runs/34778266086)：b63399c构建镜像、冷启动、完整Chromium、认证/Origin、重启通过；Release回执与digest校验、空Docker凭据目录匿名pull通过 |
 | v0.2 screenshots / captioned video | verified | 真实 packed Chromium、四张PNG、115秒H.264全片解码；作者draft为fixture，说明与入口见 [DEMO](../DEMO.md#仓库演示素材) |
 | dependency scope review | verified | plugin production audit0；实际Docker runtime24条固定upstream风险，见COMPATIBILITY；不声称全部不可达 |

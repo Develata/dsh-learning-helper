@@ -1,43 +1,36 @@
 # 当前状态
 
-**v0.2.1 已发布**。两仓 tag-only CI 全部通过，插件包、GHCR镜像及固定digest的Compose已发布；匿名docker pull通过。工作分支为 `feat/workspace-v02`，默认分支与已有tag保持原位，未升级日常实例。
+**v0.2.2 正式发布准备完成：合入 main，依次推送插件与运行壳 annotated tag。** Release/镜像的远端成功以对应 Actions 和 Release 附件为准；本页随 tag 保存的是发布前验证，不将 tag 推送当作产物发布成功。
 
-本轮新增发行CI、版本校验与pull-only部署文档；Docker验收暴露并修复任务会话创建回执早于Workspace follow的竞态（`8c18da1`）。使用公开订阅确认归属，5秒deadline、取消清理、异属拒绝及等待期间导航变化均有回归；Harness runtime仍0 patch。
+## 本版内容与边界
 
-## 发布引用
+mineru.net SaaS v4：固定官方 API、单次签名上传、batch poll、受限 ZIP 校验；Web 按 Workspace 配置密钥，公开 Harness credentials 持久化，不写 Workspace 明文、不回显。保留自托管 protocol 2、原始 PDF、历史 generation 与 citation。当前 active MinerU Markdown 已就绪时隐藏旧视觉失败提示；本地解析警告与新转换失败仍显示。学习状态与 Evidence schema 不变，Harness packages/apps 0 patch。
 
-| 对象 | 已核实的引用 |
-|---|---|
-| 插件 annotated v0.2.1 | `b63399cae9a647667baa36b44bfb3ad9ead39f84`；[CI](https://github.com/Develata/dsh-learning-helper/actions/runs/34777916261)、[Release](https://github.com/Develata/dsh-learning-helper/releases/tag/v0.2.1) |
-| 运行壳 annotated v0.2.1 | `6e057f5c26e1899f6e81bf291a94223b123ddec3`；[CI](https://github.com/Develata/learning-helper/actions/runs/34778266086)、[Release](https://github.com/Develata/learning-helper/releases/tag/v0.2.1) |
-| 镜像 | `ghcr.io/develata/learning-helper:0.2.1`，linux/amd64 |
-| 镜像 digest | `sha256:9a413606f9c1b15053a98372b279da9fe8d955fe3bb0c3549275eddf6a39f032` |
-| 当前开发分支 | 本页为发布后验收记录，branch HEAD由Git拥有；不把后续文档提交冒充tag构建输入 |
-| 冻结 v0.1.0 / origin/main | `958cf67627736232d06a9eeee70cdcb2c0369248`；迁移必须offline显式执行 |
-
-Harness固定SHA、Node/pnpm与依赖风险见 [COMPATIBILITY](../COMPATIBILITY.md)。镜像Release的versions.lock.json拥有实际构建输入，harnessForkSha不是包含此lock的metadata commit。
+用户已用官方云端完成24页PDF：471个active chunks、24页均有locator、canonical Markdown落盘、原件SHA256一致、真实Host search/read与citation通过。核查为只读，未重发收费任务，未逐页审阅公式质量；这不等于Harness视觉模型验收。
 
 ## 验证
 
-| 验证面 | 证据 / 范围 |
+| 验证面 | 实际结果 |
 |---|---|
-| 本地回归 | typecheck、156/156（130 backend/script +26 client）、build、5个demo、pack、diff检查通过 |
-| standalone | 无sibling副本的frozen install/typecheck/156 tests/build/pack通过 |
-| packed / 浏览器 | 修复后真实Harness安装、A/B、MD/PDF、数学/卡片、作者工具、quiz丢包重试、Weak/v2、任务会话、刷新及重启通过；fixture Agent，不是新LLM验收 |
-| 发布包 | 插件CI通过；Release tgz/SHA256SUMS下载校验成功；185个dist文件与本地已测试构建逐一一致 |
-| Docker CI | 运行壳CI先构建一次，EXTERNAL模式验收该镜像：coldBoot/browser/restartPersistence/authAndOrigin全部PASS，再原样传给publish；不是声称每次no-cache |
-| GHCR / 附件 | 空Docker凭据目录匿名pull完成，digest与Release相同；Compose/versions.lock/docker-result/image-digest全部SHA256校验成功 |
-| Harness检查 | 9 deployment tests、16 doc-quick、34 doc-sync、lint与push hook/typecheck通过；packages/apps对固定upstream0 diff |
-| 实际模型 | 历史newapi/gpt-5.6-luna六场景及authoring复验的独立范围见 [golden path](acceptance/golden-path.md#真实模型语义验收)；本轮没有调用模型 |
+| typecheck / tests | 139 backend/script + 26 client = 165/165 |
+| build / pack / demos | PASS；5个demo，Workspace/PDF包含在内 |
+| standalone | 无sibling的新目录 frozen install/typecheck/165 tests/build/pack通过；版本元数据更新另由tag CI核验 |
+| packed Harness / Chromium | 原生cloud设置保存/刷新/移除/丢失响应重试；MD/PDF、authoring、quiz、Weak→v2、Workspace隔离、任务会话与重启均PASS |
+| 旧视觉警告 | 新DOM回归修复前失败、修复后通过；覆盖active MinerU、local fallback、仅assetization ready、新转换失败 |
+| cloud / credentials | fake HTTP、ZIP路径/CRC/UTF-8/体积/页码、配置隔离、canonical切换/历史引用/重启通过；另有上述真实云端文件验收 |
+| dependency audit | plugin production 0；固定Harness runtime既有风险见 [COMPATIBILITY](../COMPATIBILITY.md) |
+| 本地Docker预览 | 非root、鉴权、cloud设置、PDF、资料/凭据重启持久化通过；正式v0.2.2镜像由fork CI单独验收 |
 
-本地artifacts可被后续执行覆盖；远端Release的docker-result.json与image-digest.txt是本次发行的稳定回执。本地从GHCR匿名拉取后的v0.2.1已再次通过独立volume、3012端口的完整Chromium/认证/重启验收，回执为artifacts/docker-result.json；未改动日常3010实例。
+回执在ignored `artifacts/`：`mineru-regression.log`、`mineru-standalone.log`、`mineru-audit.json`、`integration-result.json`、`main-mineru-inspection.json`、`mineru-warning-regression.log`、`mineru-warning-before.log`、`mineru-warning-after.log`。不包含密钥。
 
-## 能力与限制
+## 版本与部署
 
-Workspace隔离、双库/相对资产、TXT/MD/PDF本地解析、代际切换与历史引用、显式v1迁移、七工具作者闭环、Weak→重排、学生UI/任务会话/数学显示已实现。范围与逐项证明见 [product](product.md)、[matrix](acceptance/matrix.md)。[DEMO](DEMO.md#仓库演示素材)包含四张PNG及115秒中文字幕MP4；作者draft是fixture。
+- 发布版本：插件 package `0.2.2`，两仓 annotated `v0.2.2`；正式分支统一到 `main`，不删除旧开发分支或移动历史tag。
+- Harness固定 `0.1.5-rc.2` / upstream `c291e7961a515f6d7af9304e7fd1d257929aef26`；Node `24.18.0` / pnpm `11.7.0`。
+- 插件tag先发布tgz；运行壳lock固定其exact SHA，同名tag再构建与验证Docker镜像。镜像为 `ghcr.io/develata/learning-helper:0.2.2`，linux/amd64；Release Compose固定实际digest。
+- v0.1.0验收保持在 `958cf67627736232d06a9eeee70cdcb2c0369248`；全局旧数据只能显式迁移。
+- 用户体验中的预览仍为 `learning-helper-mineru-preview:f249b9b4c04c`，本次提交/发布不会自动替换该容器；旧视觉提示修复尚未装入该实例。
 
-真实multimodal/MinerU仍未验证：最近外部验收时模型未声明image能力，未配置官方MinerU。每个本地Workspace只允许一个Host写入；不支持NFS/SMB/同步盘并发SQLite，不删除历史generation；原始session/debug/export不是考试防作弊边界。
+操作：[MinerU配置](operations/mineru.md)、[发布](operations/release.md)、[迁移](operations/migration-v1.md)。真实vision最近验收未声明image能力；不声称所有公式正确。日常实例与用户密钥未修改。
 
-v0.2.0首次tag推送未生成Actions run；当时API enabled且用户确认页面无启用/账号限制提示，原因未确定。已有tag保持不变，实际运行缺陷修复后发布的新v0.2.1已全绿，不再是当前阻塞。
-
-下一步：① 按 [README](../README.md#快速开始) 或Release Compose显式部署；② 使用 [DEMO](DEMO.md) 演示当前闭环；③ 只有获得可用服务环境后，单独验收真实vision/MinerU，不将fixture结论扩大为真实服务质量。
+下一步：完成两仓tag CI并核对发布回执；需要更新用户预览时保留原数据与凭据；收集实际学习反馈。无额外功能扩展。
