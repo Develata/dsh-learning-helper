@@ -1,19 +1,11 @@
-# 数据模型
+# Data model
 
-可执行 schema 是字段精确表示；持久化义务由 [persistence](../contracts/persistence.md) 拥有。
+v0.2 Workspace manifest：schemaVersion=2、稳定 projectId、title/subject/examAt?/dailyMinutes。内部 `Course.id == manifest.projectId`，每个 Workspace 恰好一个 Course；初始 concepts/plans 可以为空。
 
-| 对象 | 关系与含义 |
-|---|---|
-| Course | 课程身份、subject、考试/每日预算、状态 |
-| Source / SourceChunk | 课程文件与稳定 locator 的证据片段 |
-| Concept | courseId、别名、粗粒度 prerequisites、sourceRefs |
-| Quiz / QuizItem | courseId、purpose、私有 correctOption/explanation、conceptIds/sourceRefs |
-| Attempt | submissionId + itemId 唯一，选项、确定性 score、conceptIds、时间 |
-| ConceptState | 每概念 mastery、证据计数、最近窗口、状态 |
-| ReviewItem | 概念、priority、reason、证据 Attempt ids、dueAt |
-| StudyPlan | 版本与 days/tasks，每日预算，任务状态 |
-| PlanRevision | oldVersion/newVersion、reason、evidenceAttemptIds、时间 |
+学习 aggregate 的 Concept、Quiz、Attempt、ConceptState、ReviewItem、StudyPlan、PlanRevision、Submission 结构和策略保持 v0.1 语义。外部字段投影为 project/projectId，Agent 输入不接收身份字段。
 
-LearningAggregate 包含一门 Course、Concepts、Quizzes、Attempts、ConceptStates、ReviewQueue、Plan 全版本与 Revisions、Submission receipt。聚合按 courseId 保存；一个 quiz 只允许一次有效提交，重练需发布新 quizId，避免重复题刷高掌握度。
+Evidence v2：Source 表示逻辑文档与 raw hash；原 PDF 独立 immutable archive。AssetGeneration 表示一种 PDF.js/vision/MinerU/text 规范化表示。Source.activeGenerationId 是搜索当前代；SourceChunk 的身份包含 source/generation/ordinal，原始 TXT 的 text-v1 identity 保留以兼容迁移。PDF locator 只跨一个真实 page，block 由系统编号。
 
-Course setup 可以完全没有 Concept/Plan，state.plan 返回 null，schemaVersion 仍为 1。Source/SourceChunk 已实现于独立 Evidence DB，具有 processing/ready/failed 生命周期、normalized contentHash、稳定 chunkId/locator；FTS 是从 chunks 重建的查询投影，精确表示见 [Evidence](../contracts/evidence.md)。CourseOutlineDraft / StudyPlanDraft / QuizDraft 是严格输入，字段与发布规则见 [Agent tools](../contracts/agent-tools.md)。Host 将 evidenceChunkIds 转为 canonical sourceRefs，初始化 ConceptState、派生身份/时间/版本；draft 不是另一份 durable object。LearningAggregate 字段与 version 1 不变，P4 studentDashboard、quizSummaries、quizResult 是派生读模型，仅选取学生所需字段；答题前不含 key，已提交 result 才返回答案与讲解。recentRevisionTasks 由新旧版本 task IDs 推导，不持久化。精确边界由 [Web UI](../contracts/web-ui.md) 拥有。
+Generation reservations / derived-file reservations 是容量和恢复账目，不是学习状态。失败任务保留已知 taskId 可显式恢复；未知提交状态不自动重复提交。[精确 contract](../contracts/evidence.md)。
+
+Student dashboard / quiz result 是派生只读视图，不添加 durable fields；答题前不包含 correctOption/explanation，提交后可恢复反馈。

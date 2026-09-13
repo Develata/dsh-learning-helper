@@ -4,7 +4,7 @@ Learning Helper：课程证据 + 学习状态 + 可解释的自适应行动。
 
 | 任务 | 阅读路径 |
 |---|---|
-| 恢复工作 | [CURRENT](CURRENT.md) → [plan](plan/v0.1.md) |
+| 恢复工作 | [CURRENT](CURRENT.md) → [v0.2 plan](plan/v0.2.md) |
 | 理解产品 | [product](product.md) → [overview](architecture/overview.md) |
 | 改业务 | [constitution](constitution.md) → [ownership](architecture/module-boundaries.md) → [persistence](contracts/persistence.md) → [acceptance](acceptance/matrix.md) → CodeGraph |
 | 改工具/资料 | [agent-tools](contracts/agent-tools.md) / [evidence](contracts/evidence.md) → [integrations](architecture/integrations.md) |

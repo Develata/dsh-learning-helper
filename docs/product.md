@@ -1,13 +1,15 @@
 # 产品范围
 
-用户：短期备考大学数学分析/微积分的本科生，复习窗口 3–14 天。痛点是昨天的错误不能可靠改变今天的练习安排。
+用户：短期备考的本科生，首批数学分析/微积分，复习窗口3–14天。产品价值是把错题证据持续转化为接下来的学习行动，而非只回答当前问题。
 
-价值：Evidence + Learner State + Adaptive Action。评分取舍依次为完整闭环、Agent 功能、学习体验、外观、额外能力。
+**v0.2：One Workspace = one Learning Project。** 学生在 Harness 选择本地 Workspace，然后启用学习能力；资料、原件、canonical assets、学习状态、计划和练习历史都随 Workspace 保存和移动。没有插件全局课程列表。
 
-v0.1 交付范围：课程创建；Markdown/TXT 资料导入；引用式 QA；3 天计划；5 题交互 MCQ；确定性评分；Attempt/ConceptState/ReviewQueue 持久化；薄弱检测；实际重排与 PlanRevision；学生看到变更缘由。真实模型行为与部署验收独立于确定性功能证明，见 [最终验收](acceptance/final-delivery.md)。
+保留完整闭环：Evidence → Agent grounded outline/initial plan/quiz → student MCQ → deterministic Attempt/ConceptState/ReviewQueue → adaptive PlanRevision → 学生看到为什么改变。一个计划任务可新建多个学习会话，新建自动发送学习请求，继续已有会话不重发。
 
-P5 feature freeze：PDF/MinerU/OpenFile、模拟测验、简答题、FSRS、Anki、Obsidian、NotebookLM、DeepTutor、向量搜索均 deferred。v0.1 是本机单用户学习助手，沿用 Harness 浏览器认证；不提供多用户、教师/家长后台、社交、音视频教师、默认多 Agent、复杂知识追踪、通知/cron、用户删除 Source（避免引用悬空）。
+资料：TXT/Markdown 直接成为 canonical asset；PDF 本地快速解析带页码证据，自动/高精度由当前 Harness 模型的 image 能力决定。可选外部官方 MinerU API 转换为长期 Markdown；失败不破坏已有证据。正常检索 canonical generation，只有歧义/图表/公式/出处核验才检查原件页面。
 
-首个 Demo 是 3-Day Adaptive Study Loop：Day 1 一致连续两次答错，Day 2 加入 20 分钟定向复习和 3 题练习，显示错误证据与计划差异。路径由 [golden-path](acceptance/golden-path.md) 定义；fixtures 仅证明业务逻辑，不能替代真实 Agent orchestration。
+优先级仍是完整闭环、Agent行为、学生体验、外观、额外能力。领域代码拥有学习事实，模型提出 draft；材料与模型输出不拥有规则权限。结构/出处验证不等于数学正确性证明。
 
-体验反馈授权的开发增量：学生从计划任务进入独立学习会话，一个任务可保留多个会话。新建即发送该任务的学习请求，继续已有会话不重发；进入会话不等于完成任务。当前为本地开发状态，发布/运行情况由 CURRENT 拥有。
+仍不做：多用户/独立认证、教师后台、社交、语音、视频、通知/cron、FSRS、向量库、Obsidian/NotebookLM/DeepTutor/OpenFile集成、Source删除。只支持本地单Host文件系统，SQLite不承诺NFS/SMB/云盘同步挂载安全。真实模型/MinerU可用性与实际验收状态见 [matrix](acceptance/matrix.md) / [CURRENT](CURRENT.md)。
+
+v0.1.0 保留为已验收版本；升级必须显式[迁移](operations/migration-v1.md)，不启动时静默重置旧数据。核心演示仍是：两次一致连续错误 → Weak → 明天20分钟复习和3道针对题。

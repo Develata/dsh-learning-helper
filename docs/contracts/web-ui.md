@@ -1,33 +1,35 @@
-# Host / Browser contract v1
+# Host / Browser contract v2
 
-Host 路由前缀 `/learning-helper/v1`：GET `/health`；GET `/courses/:courseId/state`；GET `/courses/:courseId/quizzes/:quizId`；POST `/courses/:courseId/submissions`，body 为 `{ submissionId, quizId, answers: [{ itemId, selectedOption }] }`。
+作用域：`/learning-helper/v2/sessions/:sessionId`。Host 每次根据公开 Workspace.sessionIds 解析 canonical root；浏览器只提交 authenticated Session 地址，不提交 courseId、workspaceId 或 path。无有效 Workspace 时 fail closed。用户通过 Harness 工作区导航切换项目，Learning Panel 没有第二个 Course selector。
 
-读取 quiz 不包含 correctOption/explanation；state 不包含私有 quiz keys。提交成功返回 grading receipt、Attempt evidence 与 plan revision；错误 `{ error: { code, message } }`。unknown → 404，冲突 → 409，invalid → 400，limit → 413，storage failure → 503。
+每条请求先经过公开 `ctx.connection.requestRejection` 的 Host/Origin/cookie 校验。不保存 token，不绕过认证。普通 JSON 64 KiB/10 秒；文本资料 body 单独 4 MiB，实际 UTF-8 512 KiB；PDF 是 application/pdf 流、64 MiB/30 秒、四个并发 upload。错误仅安全 code/message：404 不存在、409 冲突、400 输入错误、413 超限、503 不可用。
 
-每条路由先经公开 `ctx.connection.requestRejection(req)` 校验 Harness 浏览器会话与 Host/Origin；未认证返回 401/unauthorized，来源拒绝返回 403/forbidden。插件不实现独立认证。普通 JSON body 最多 64 KiB，读取最多 10 秒；POST 要求 application/json。提交时间与学习日由 Host 时钟决定，客户端无法提供 correct/mastery。
+| Method / suffix | Body / output |
+|---|---|
+| GET /project | `{project: manifest|null}` |
+| POST /project | 严格 title/subject/dailyMinutes/examAt?；Host 生成稳定 projectId，初始化一个 Workspace |
+| GET /dashboard | project、concept/status/evidenceCount、currentPlan、recentPlanRevision、真实 revision tasks/evidence、public quiz summaries |
+| GET /sources | Source 状态、page/chunk count、parser、parsing/assetization、独立 quota usage、100份提示 |
+| POST /sources/text | filename/mimeType/text；ready 或 deduplicated |
+| POST /sources/pdf?filename=…&mode=… | binary PDF；202 sourceId，Host 承接有界解析，随后读取 sources 状态 |
+| GET /config；POST /config | 严格非 secret Workspace 配置；可信 MinerU URL，不能写 token |
+| GET /capabilities | 当前会话模型是否明确声明 image 能力 |
+| POST /assetize | sourceId/retryUnknown?；202 bounded async continuation，不等待长轮询响应 |
+| GET /evidence/search；POST /evidence/read | [Evidence contract](evidence.md)；Agent 在同进程直接调用服务 |
+| GET /quizzes；GET /quizzes/:id | public summaries / public quiz；提交前不含 key/explanation |
+| GET /quizzes/:id/result | 未提交 `{result:null}`；已提交逐题 selected/correct/key/explanation |
+| POST /submissions | submissionId/quizId/answers；冻结答案的幂等 grading receipt |
 
-Client：原生 right sidebar page-type Learning panel，header.actions 提供入口；空会话没有 header 时由 input.left 提供同一入口，不占 corner。课程设置、Plan、Progress、Quiz 共用选中课程。上传仅 Markdown/TXT（前端 512 KiB 预检，Host 最终验证）。生成计划/练习等上方快捷动作通过 session slot 的 inputActions.setDraft 预填 composer，学生确认发送；Browser 不调用 authoring publish。
+`/learning-helper/v1/health` 与 `/v2/health` 保留 authenticated health。v1 courses routes 不再注册；不能用旧 HTTP API 遍历全局数据。Dashboard 是从 learning snapshot 派生的只读投影，不扩充 durable schema、不读取 corpus。课题名称、状态不用伪精确 mastery 百分比。
 
-计划任务会话（体验反馈授权）：一个 task 可关联多个 Harness 普通会话。“新会话”是明确的发送操作：从 AI 已生成的 task.reason、conceptIds、type、时间预算组成开场请求，先读学习状态及课程资料，再开始学习/复习/发布练习。没有额外的隐藏 LLM 调用；开场模板与不可信计划数据分隔，不伪称整个模板由模型撰写。新会话沿用点击时的 workspace/cwd、Agent preset 和已选择的模型；未有 session model override 时沿用 Host 默认。不覆盖原会话 composer 草稿。“继续学习”只导航，不重复发送，不把进入会话视作完成任务或掌握度变化。
+原生 `dsh.client`、right sidebar page-type tab、header.actions/空会话 input.left、typed tool views；不占 corner、不创建 SPA/drawer。初始化→资料→计划/进度/练习，PDF 模式为 auto/local-fast/high-accuracy；视觉不可用时高精度明确禁用。独立 MinerU 选项与 config；PDF 已可用但 assetization failed 时保留证据，提供重试。解析与 assetization 分开显示，避免 local Ready 被误认为视觉解析已完成。100 份 soft warning、200 hard limit。
 
-会话内容由 Harness 持久化；插件只在同源 localStorage 的 `learning-helper:task-sessions:v1` 保存 `{courseId,planId,taskId,sessionId,requestId,title,prompt,createdAt,seed,phase}` 书签。按 course/plan/task 精确筛选；同一 plan 的 v2 保留已有 taskId 的会话。书签最多 100 个、单 prompt 16,000 字符、总读取 2,000,000 字符；满额或存储失败明确拒绝新建，不删除聊天。清除浏览器数据/更换浏览器或 origin 会丢失入口，Harness 会话仍可从会话列表找回；不新增 LearningAggregate 或 Evidence DB 字段。
+只在 panel open/显式刷新/上传或提交后拉取。长任务状态 2 秒一次、最长 610 秒；Host 自身的超时不依赖面板。组件切换 Session 后卸载旧请求并忽略迟到响应。所有 browser fetch 使用同源 cookie/AbortSignal，普通 12 秒、binary upload 45 秒。不把 React state 当真值。
 
-会话创建与发送是两步，先保存稳定 sessionId/requestId 和冻结 prompt，再调用公开 sessions.create → preset/model selection → SessionFace.prompt → sessions.open/layout。`created → prepared → sent` 记录准备/发送确认；每次操作最多 30 秒、单 client 串行，超时不自动重试，迟到结果不能继续发送或导航。创建/发送响应丢失后“重试开始”复用身份；准备完毕不重新配置已开始的会话。发送确认后导航失败仍保留 sent；普通打开不发送。等待期间其他导航优先；未确认请求可通过“进入会话”检查模型和已有消息。浏览器书签不是跨设备课程会话真值或同步服务。
+Quiz：load → answering → submitting → submitted。第一次提交冻结 answers/submissionId，未知结果后的重试复用 payload；禁止换答案重记账。刷新通过结果 API 恢复。普通 quiz payload、dashboard、DOM 与专用 quiz_publish card 在提交前不展示 key/explanation；card 不读取 raw args，无 Inspect/Raw Input，render/replay 无 Host mutation。原始 session/debug/export 可能保留作者参数，**不是考试防作弊边界**。Plan card 是发布当时的版本，panel 是当前版本。
 
-Student projection：GET `/courses/:courseId/dashboard` 返回 course、concepts（id/name/prerequisiteIds/status/evidenceCount）、currentPlan、recentPlanRevision、recentRevisionTasks（该次修订新增的 day/task）、recentRevisionEvidence（真实错误 Attempt 的题目/所选选项/概念）与 quiz summaries。GET `/courses/:courseId/quizzes` 返回 `{quizzes}`，仅 id/purpose/createdAt/itemCount/submitted/submittedAt/correctCount。GET `/courses/:courseId/quizzes/:quizId/result` 返回 `{result:null}`（存在但未提交）或提交后逐题 selectedOption/correct/correctOption/explanation 与正确题数；未知课程/quiz 为 404。这些是从一个已提交 snapshot 派生的 read model，不改变 durable schema，不读 Evidence DB。
+计划任务会话：上方快捷动作仅预填当前 composer，学生确认发送。task 的“新会话”是明确发送授权：从 AI 已生成的任务目标与知识点组成冻结请求，经公开 sessions.create、preset/model selection、SessionFace.prompt、sessions.open。继承当前官方 Workspace；继续学习只导航、不重发、不把进入任务当掌握度提高。一个任务可有多个会话。
 
-Quiz 状态：load → answering → submitting → submitted；任何失败显示有限错误与 retry。首次提交冻结 answers + submissionId，超时重试复用同一 payload；不能在未确定结果时换答案或生成新 identity。刷新/重新进入通过 result API 恢复反馈；Host 是真值。课程切换/卸载取消旧请求并忽略过期结果。Browser 请求仅同源 cookie，AbortSignal + 每请求 12 秒 timeout，不保存 token。
+书签在同源 localStorage `learning-helper:task-sessions:v2`，projectId/planId/taskId/sessionId/requestId 与 created/prepared/sent 状态；≤100、prompt≤16000字符、总读取≤200万字符。内容由 Harness 持久化。浏览器数据清除或 origin 改变会失去书签入口，但聊天仍在 Harness；v1 书签 key 保留，不当作 v2 作用域授权。创建/发送有30秒界限，响应丢失用同一 identity 重试，迟到回调不得继续导航。
 
-普通 student-facing Quiz payload 和 quiz_publish tool card 在提交前不展示 answer key / explanation。专用 keyed tool view 接管 pending/success/error，绝不读 raw args、不提供 Inspect/Raw Input、不 fallback 到 generic raw JSON。原始 session/debug/export 仍可能包含 Agent authoring arguments，不是防作弊安全边界。Card render/replay 纯展示，按钮只导航；实际提交仅来自学生显式操作。Plan card 标明发布当时版本，打开 panel 读取最新计划，避免把旧 tool result 误称 current。
-
-中等宽度下使用 Harness 右上角原生全屏；窄于 768px 由 Harness 自动全屏，插件不实现 drawer 或改全局布局。
-
-UI 使用 Harness tokens/primitives，状态文字与颜色并用；Plan v1→v2 展示实际错误证据和当前任务（20 分钟 review / 3 题）。按 panel open、显式刷新、上传/提交后读取，不高频 polling。验收状态由 acceptance/CURRENT 拥有。
-
-POST `/courses` 接收严格 Course draft（id/title/subject/examAt?/dailyMinutes），返回 201 `{ course }`；GET `/courses` 返回 `{ courses }` 元数据列表，不含私有聚合。setup 课程 GET state 正常返回 `plan: null`。
-
-P2 Source API：POST `/courses/:courseId/sources/text` 接收 `{ filename, mimeType: "text/plain" | "text/markdown", text }`（UTF-8 JSON，不用 base64），返回 201 `{ source, deduplicated: false }` 或重复时 200；GET `/courses/:courseId/sources` 返回 `{ sources }`，包含失败状态以便重导。Source body 独立 4 MiB、10 秒，与 [Evidence content 上限](evidence.md) 分开；断开会取消在途解析。GET `/courses/:courseId/evidence/search?query=...&limit=5` 和 POST `/courses/:courseId/evidence/read`（`{ chunkIds }`）返回同 application canonical output；Agent 本身直接调用 service。没有 Source 删除接口。
-
-quiz_publish 的会话文本现在是 courseId/quizId/itemCount/openIn 摘要；卡片兼容该回执和历史完整 public-quiz JSON，未知/越界值保持安全通用入口。即时 ToolRuntime canonical value 仍保留完整 public quiz。浏览器不能假设 canonical value 会替代会话中的 rendered content。
-
-品牌：三个正式 brand slots 使用 Learning Helper 名称与原创书本标志；注册随 slot declaration / plugin 生命周期清理，priority -10 覆盖官方品牌，不接管导航、模型设置或数据。fork 拥有初始 HTML/title、favicon、Web App manifest 和不支持覆盖的双语产品文案。真实供应商名、技术标识与 OSS 署名不作为产品名称替换。
+使用 Harness tokens/primitives；按钮/单选有名字，状态同时用文字，错误/status有语义。1440/1024/390 使用原生 push/fullscreen。三个正式 brand slots 为 Learning Helper，不替换实际 provider/model 技术名。v0.2 不合入独立品牌 fork 的 runtime 变更。

@@ -1,38 +1,12 @@
-# 集成边界与审查
+# Integrations
 
-审查基线：Harness `c291e7961a515f6d7af9304e7fd1d257929aef26`（0.1.5-rc.2），2026-09-12。Node 24.18.0，仓库要求 pnpm 11.7.0；两仓初始 clean，origin/upstream 已正确设置。
+固定 Harness 0.1.5-rc.2 / upstream c291e7961a515f6d7af9304e7fd1d257929aef26。运行壳拥有 profile/发行配置，学习业务在独立 npm package。v0.2 无 packages/apps patch。
 
-| 分类 | 决定与源码证据（Harness checkout 相对路径） |
-|---|---|
-| UPSTREAM | bundle `dsh.bundle.patch` 与 profile：`docs/user/develop/basic/publish.md`、`apps/cli/reference/README.md`；无需 launcher patch |
-| UPSTREAM | Host `WebServer.register`：`packages/host/webserver/src/index.ts`；提供 exact/prefix route 与 disposer；carrier 不负责全局认证，插件在路由入口调用 `packages/client/connection/src/rpc-host.ts` 的 `requestRejection` |
-| UPSTREAM | Client `dsh.client` + `./client`：`docs/subsystems/client-modules.md`、`packages/client/modules`；factory 通过 `__ModuleLoader__.load` 注册 |
-| UPSTREAM | slots / tool views：`packages/client/ui-slots`、`packages/client/ui-tool`；UI 可以独立 package face |
-| UPSTREAM | `DomainFacility.open` / `KvTable.update`：`packages/storage/storage-domain/src`；SQLite：`packages/storage/storage-sqlite/src` |
-| UPSTREAM | Agent `defineTool` / tools registry：`packages/core/tools`；per-session preset：`packages/preset/agent-presets` |
-| UPSTREAM | attachment、MCP 与 extensions 保持各自语义；不以 session-query 存课程资料 |
-| PATCH | v0.1.0 无；后续品牌分支允许 9 个前端源码/资源文件与 11 个相应测试/快照文件，精确清单由 fork UPSTREAM_PATCHES.md 拥有；Agent/Host/学习逻辑不改 |
-| NEW | Learning domain/policy/services/providers/host/tools/client 与控制文档 |
-| OPTIONAL | OpenFile/MinerU；不阻塞第一轮闭环 |
+- WorkspaceRegistry.list 的 sessionIds 已核验 session header cwd；WorkspaceResolver 仅使用这个公开投影，不接受工具传路径。一个 Host 实例按请求打开 Workspace 数据。
+- defineTool / systemPrompt.section：七工具与一份 grounding policy；普通 QA 不授权 outline/plan/quiz mutation。
+- LlmService.prepareCall / prepared.stream、Agent.options、AttachmentService.saveImages：复用当前模型与官方图片输入。PDF 页先在 Worker 渲染 PNG；模型必须显式声明 image modality。未具备能力时明确 gate，不假装视觉成功。Harness attachment 是 transport copy，Workspace PDF/代际文本为学习 provenance authority。
+- Mozilla pdfjs-dist 6.3.289：本地文本/页数/页渲染，Apache-2.0；不实现自研 PDF parser。
+- MinerU：可选外部自托管 API protocol 2，未打包 Python/OCR/模型；[已核对协议](https://github.com/opendatalab/MinerU/blob/4fe4bde114a23ee5dd637eae99b767f4669bf58c/mineru/cli/fast_api.py)。不兼容冒称 SaaS v4。Token 仅 runtime environment；workspace config 无 secret。
+- dsh-open-file、NotebookLM、Obsidian、DeepTutor、向量服务：deferred，不在运行依赖路径。
 
-存储实现核实：update transform 在单域写队列内运行，backend durability 后更新内存；失败不改变内存；close 拒绝新写并 drain。无跨表事务/索引/自动迁移。该 SHA 的写路径信任 typed caller，插件自行校验写入。
-
-[dsh-teacher](https://github.com/Yihong89/dsh-teacher) 的 package/README/patch 与 MIT LICENSE 已阅读：可参考双 face、quiz submit 与 tool view 思路，当前 patch 为空并要求 preset opt-in；本轮不复制其代码、不引入依赖。其 LLM grading 不适合本项目真值要求。
-
-[dsh-open-file](https://github.com/hyper-dsh-plugins/dsh-open-file) 公开 tool 为 file_inspect/read/ocr/render，HTTP 公开说明主要为 session-bound upload；package 0.1.2-rc.1 peers 固定旧 Harness，README 兼容表也有版本差异。尚未证明可复用的稳定 document-parser Host API，不导入私有实现；后续先工具适配并验证版本。
-
-P2：DocumentParser 的 TextParser 实现 TXT/MD；SqliteEvidenceStore 使用 Node 内置 SQLite 与独立 evidence.db，实际 runtime FTS5 probe 和 literal fallback 测试通过。公开 defineTool / systemPrompt.section 挂载 retrieval 工具与静态 grounding policy；真实 packed Host 的 registry dispatch 和 prompt assembly 已验收。
-
-OpenFile 复验（2026-09-12）：npm 0.1.2-rc.1 / Git HEAD `39636d198993c5980da0091056d307bb5a8a48c5`。隔离目录中固定 Harness 0.1.5-rc.2，`pnpm install --lockfile-only --strict-peer-dependencies --ignore-scripts` 返回 ERR_PNPM_PEER_DEP_ISSUES；agent/tools/skill/session/webserver 等要求精确 0.1.2-rc.1，实际安装 0.1.5-rc.2。未 force/override，未加载其 runtime，不能宣称兼容。公开 API 仍为 file_inspect/read/ocr/render，未证明稳定 parser Host API；probe 回执位于本地 artifacts/openfile-probe.json。
-
-PDF/MinerU、NotebookLM → EvidenceProvider、Obsidian → LearningExportSink、DeepTutor → TutorProvider 均 deferred；TXT/MD Hard Gate 不依赖它们。
-
-P3 复用上述公开 API：Host 全局注册七工具（四读、三发布），standard Agent preset 继承。CourseAuthoringService 通过 EvidenceService 验证引用后调用 LearningService，不改变作用域、数据库所有权或 Harness runtime；源码定位见 [map](../map/architecture.md)。数学分析 guidance 仅提供教学规则，不建立领域专用 service。
-
-Agent 流程调研（2026-09-13）：Anthropic [Building effective agents](https://www.anthropic.com/engineering/building-effective-agents) 的简单组合原则、[Writing effective tools](https://www.anthropic.com/engineering/writing-tools-for-agents) 的任务上下文聚合与精简模型响应，适用于当前七工具。前者是设计参考，不采用其可能随时间变化的框架推荐；本地 contract 仍以固定 Harness SHA 为准。对应实施为准备阶段/近期练习的只读 projection、model-render 白名单、同一 grounding policy 的有界恢复；不增加 agent framework、router model 或多 Agent。收益以实际输出字节与工具/语义验收记录为准，不能从文献推导本项目加速比。
-
-Skill/MCP 已有公开 seam：固定版本 `packages/skill/skill` 的 `ctx.skills.register/registerProvider` 支持摘要目录及按需正文加载，standard preset 已挂 `skill-filesystem`/`tool-skill`；`packages/mcp/mcp-client` 将 stdio / Streamable HTTP 的外部工具注册到同一 registry，当前不支持 MCP resources/prompts。Learning 插件不阻断这些能力，但没有默认接外部服务器。后续学科/教学法指导可作为按需 Skill；不可绕过的 evidence、授权、grading 约束继续留在静态 policy/domain。MCP 只用于真实外部能力缺口，按任务配置并限制工具数量/超时，不能用自然语言 memory 替代 Learner State；本轮仅核实复用边界，未新增 Skill/MCP 配置。
-
-P4 使用固定版本的 `ClientModuleRegistry` / `dsh.client`：`./client` 指向 dist/client.js，esbuild 生成当前 lazy CommonJS factory 格式。Harness 的 clientBundle preset 未公开发布（docs/cookbook/adding-a-settings-card.md），插件内仅实现其 artifact wrapper，不复制旧 teacher bundle。React/primitives 由平台共享；其余依赖声明描述 client module 关系；实际激活等待 Cordis service，slot 贡献通过 slots.inject 等待声明。
-
-原生 `sidebarRightTabs.register` + `sidebar.right.pane.tab` 挂 Learning 页面，`sidebarRight.openTab` 导航；header.actions 与空会话 input.left 挂入口，`inputActions.setDraft` 保留学生发送确认。四个 keyed `tool.call.toolview` 替代 raw authoring cards，live/replay 都只读。注册与 scoped CSS 均由 Cordis effect 释放，没有 apps/web、router 或独立 drawer。
+native dsh.client 继续复用 sidebar、slots、Session/Workspace client controllers、primitives。客户端学习请求走 authenticated same-origin session routes；没有独立 SPA/router。

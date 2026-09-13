@@ -1,16 +1,20 @@
-# 系统结构
+# Workspace 学习能力层（v0.2）
 
-Harness 拥有 Agent runtime、模型、session、MCP、Web shell 与学习存储基础设施。Learning plugin 拥有学习语义、证据与工具；runtime core patches = 0。
+一个 Host/profile 插件实例通过公开 WorkspaceRegistry 的 Session membership 解析每次请求；当前 Harness 没有 workspace-scoped Cordis composition，不模拟该生命周期。
 
-```text
-Agent Plane:    defineTool + grounding section → retrieval / CourseAuthoringService
-Authoring:      Draft validation → EvidenceService.read → LearningService atomic publish
-Evidence Plane: EvidenceService → DocumentParser + EvidenceStore → evidence.db (Source/Chunk/FTS)
-Learning Plane: LearningService → domain/policy → HarnessLearningStore → state.db (learning aggregate)
-Student UI:    native dsh.client / slots → authenticated Host → student read models / submit
-Host routes:   authenticated HTTP → 对应 application service
+```mermaid
+flowchart TD
+  S[Harness Session] --> R[WorkspaceResolver]
+  R --> W[WorkspaceProject]
+  W --> L[LearningService / state.db]
+  W --> E[Evidence / evidence.db]
+  E --> A[learning-assets]
+  E --> O[immutable PDF archive]
+  T[7 Agent tools] --> R
+  UI[Native Learning panel] --> H[Authenticated session HTTP]
+  H --> R
 ```
 
-P1 答题仍按课程一次原子写 Attempt/ConceptState/ReviewQueue/StudyPlan/PlanRevision，不访问 corpus。P2 EvidenceService 只用 Course 元数据确认身份，不 clone 学习历史；资料不进入 LearningAggregate。两个数据库各自拥有原子性，没有跨库事务；来源/课程删除暂缓，避免悬空引用。
+Workspace root 由 Harness 的 canonical path 提供；稳定 projectId 来自 manifest，目录移动不改变它。每个 Workspace 内只有一份学习 aggregate；内部 Course 类型保留，外围没有 Course collection/selector。Evidence 不进入 learner aggregate，答题不读取 corpus。
 
-依赖与写权限由 [module boundaries](module-boundaries.md) 拥有，具体存储决定见 [ADR-0003](../adr/0003-separate-evidence-store.md)。Authoring 不接触 DB；它读取 Evidence canonical refs 后交给 LearningService 发布。客户端通过 sidebar page tab 展示 Course/Plan/Progress/Quiz；tool cards 仅投影与导航，生成快捷动作只预填官方 composer。
+资料生命周期及持久化分别由 [Evidence](../contracts/evidence.md)、[Persistence](../contracts/persistence.md) 拥有。v0.1 保留在既有 tag，升级必须显式 [迁移](../operations/migration-v1.md)。
