@@ -11,7 +11,7 @@ type WorkspaceId = NonNullable<NonNullable<Parameters<ISessions['create']>[0]>['
 type RequestId = NonNullable<Parameters<NonNullable<ReturnType<ISessions['binding']>>['session']['prompt']>[3]>;
 
 /** Public Harness services only; no HTTP loopback, private API or composer draft writes. */
-export function taskSessionPort(ctx: Context): TaskSessionPort {
+export function taskSessionPort(ctx: Context, ownershipTimeoutMs = 5000): TaskSessionPort {
   // Host and Browser deliberately use distinct sessions faces under the same service key.
   const sessions = ctx.get('sessions') as unknown as ISessions;
   const workspaces = ctx.get('workspaces') as IWorkspaces;
@@ -22,10 +22,33 @@ export function taskSessionPort(ctx: Context): TaskSessionPort {
     if (!value) throw new TaskSessionError('会话暂不可用，请刷新后重试。');
     return value;
   };
-  const verifyWorkspace = (entry: TaskSession) => {
-    const owners = workspaces.list.getSnapshot().items.filter(w => w.sessionIds.includes(entry.sessionId as SessionId));
-    if (owners.length !== 1 || owners[0]!.workspaceId !== entry.seed.workspaceId)
-      throw new TaskSessionError('任务会话的 Workspace 归属尚未确认或已改变，请刷新后重试。');
+  const verifyWorkspace = async (entry: TaskSession, signal: AbortSignal) => {
+    signal.throwIfAborted();
+    const confirmed = () => {
+      const snapshot = workspaces.list.getSnapshot();
+      const owners = snapshot.items.filter(w => w.sessionIds.includes(entry.sessionId as SessionId));
+      if (snapshot.archivedSessionIds.includes(entry.sessionId as SessionId) ||
+          owners.length > 1 || (owners.length === 1 && owners[0]!.workspaceId !== entry.seed.workspaceId))
+        throw new TaskSessionError('任务会话的 Workspace 归属已改变或已归档，请刷新后重试。');
+      return owners.length === 1;
+    };
+    if (confirmed()) return;
+    // Session.create and the independent Workspace follow stream may settle in either order.
+    // Wait for Host evidence, never infer ownership or retry a mutation to repair a stale view.
+    await new Promise<void>((resolve, reject) => {
+      let unsubscribe = () => {};
+      const finish = (error?: unknown) => {
+        clearTimeout(timer); unsubscribe(); signal.removeEventListener('abort', abort);
+        if (error !== undefined) reject(error); else resolve();
+      };
+      const abort = () => finish(signal.reason);
+      const check = () => { try { if (confirmed()) finish(); } catch (error) { finish(error); } };
+      const timer = setTimeout(() => finish(new TaskSessionError('任务会话的 Workspace 归属尚未确认，请刷新后重试。')), ownershipTimeoutMs);
+      unsubscribe = workspaces.list.subscribe(check);
+      signal.addEventListener('abort', abort, { once: true });
+      if (signal.aborted) abort(); else check();
+    });
+    signal.throwIfAborted();
   };
   return {
     capture() {
@@ -53,7 +76,7 @@ export function taskSessionPort(ctx: Context): TaskSessionPort {
       signal.throwIfAborted();
     },
     async prepare(entry, signal) {
-      signal.throwIfAborted(); verifyWorkspace(entry);
+      await verifyWorkspace(entry, signal);
       if (entry.seed.preset) {
         const preset = await remote.agentPresets.select(entry.sessionId as SessionId, entry.seed.preset);
         signal.throwIfAborted();
@@ -69,7 +92,7 @@ export function taskSessionPort(ctx: Context): TaskSessionPort {
       if (!renamed.ok) throw new TaskSessionError('会话标题保存失败，请重试开始。');
     },
     async send(entry, signal) {
-      signal.throwIfAborted(); verifyWorkspace(entry);
+      await verifyWorkspace(entry, signal);
       const result = await binding(entry).session.prompt([{ type: 'text', text: entry.prompt }], 'queue', signal, entry.requestId as RequestId);
       signal.throwIfAborted();
       if (!result.ok) throw new TaskSessionError('学习请求发送未确认，请检查连接和模型配置，再用“重试开始”继续。');
@@ -83,7 +106,9 @@ export function taskSessionPort(ctx: Context): TaskSessionPort {
       signal.throwIfAborted();
       if (!sessions.list.getSnapshot().byId[entry.sessionId as SessionId] || workspaces.list.getSnapshot().archivedSessionIds.includes(entry.sessionId as SessionId))
         throw new TaskSessionError('会话已不可用，请在会话列表检查是否已归档。');
-      verifyWorkspace(entry);
+      await verifyWorkspace(entry, signal);
+      if (pending?.sessionId === entry.sessionId && pending.signal.aborted)
+        throw new TaskSessionError('学习请求已发送。你已切换页面，可点击“继续学习”打开该会话。');
       // Use the sidebar's own state owner, rather than only hiding its layout track.
       if (ctx.sidebarRight.isExpanded()) ctx.sidebarRight.toggleExpanded();
       sessions.open(entry.sessionId as SessionId);

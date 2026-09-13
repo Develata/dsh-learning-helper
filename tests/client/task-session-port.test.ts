@@ -4,18 +4,19 @@ import type { Context } from '@deepseek-ai/cordis';
 import { taskSessionPort } from '../../src/client/task-session-port.js';
 import type { TaskSession } from '../../src/client/task-sessions.js';
 
-function setup() {
+function setup(deferredOwnership = false, ownershipTimeoutMs = 5000) {
   const calls: [string, ...unknown[]][] = [];
   const list = { current: 'source', byId: { source: { id: 'source', cwd: '/workspace',
     projectionValues: { agentPreset: 'standard', modelSelection: { next: { provider: 'test', model: 'custom', reasoningEffort: 'high' } } } } } as Record<string, unknown> };
   const workspace = { items: [{ workspaceId: 'workspace', sessionIds: ['source'] }], archivedSessionIds: [] as string[] };
   const nav = new AbortController();
+  const listeners = new Set<() => void>();
   const services = { sessions: { list: { getSnapshot: () => list },
-    create: async (opts: { sessionId: string }) => { calls.push(['create', opts]); list.byId[opts.sessionId] = { id: opts.sessionId }; workspace.items[0]!.sessionIds.push(opts.sessionId); return opts.sessionId; },
+    create: async (opts: { sessionId: string }) => { calls.push(['create', opts]); list.byId[opts.sessionId] = { id: opts.sessionId }; if (!deferredOwnership) workspace.items[0]!.sessionIds.push(opts.sessionId); return opts.sessionId; },
     binding: () => ({ session: { rename: async (title: string) => { calls.push(['rename', title]); return { ok: true }; },
       prompt: async (...args: unknown[]) => { calls.push(['prompt', ...args]); return { ok: true }; } } }),
     open: (id: string) => { calls.push(['open', id]); list.current = id; }, refresh: async () => {},
-  }, workspaces: { list: { getSnapshot: () => workspace } }, remote: {
+  }, workspaces: { list: { getSnapshot: () => workspace, subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; } } }, remote: {
     agentPresets: { select: async (...args: unknown[]) => { assert.equal(args.length, 2); calls.push(['preset', ...args]); return { ok: true }; } },
     session: { selectModel: async (...args: unknown[]) => { assert.equal(args.length, 1); calls.push(['model', ...args]); return { ok: true }; } },
   } };
@@ -24,10 +25,10 @@ function setup() {
     sidebarRight: { isExpanded: () => true, toggleExpanded: () => { calls.push(['collapse']); } },
     get conversation() { throw new Error('Original composer must never be accessed'); },
   } as unknown as Context;
-  const port = taskSessionPort(ctx);
+  const port = taskSessionPort(ctx, ownershipTimeoutMs);
   const entry: TaskSession = { projectId: 'course', planId: 'plan', taskId: 'task', title: 'topic', prompt: '学习请求',
     sessionId: 'session-new', requestId: 'stable-request', createdAt: new Date().toISOString(), seed: port.capture(), phase: 'created' };
-  return { port, calls, entry, nav, workspace };
+  return { port, calls, entry, nav, workspace, listeners, notify: () => { for (const listener of listeners) listener(); } };
 }
 
 test('public Harness adapter captures workspace/preset/model and sends only to the created session', async () => {
@@ -53,5 +54,52 @@ test('a task bookmark cannot prepare, send or navigate into another workspace', 
   const f = setup(); const signal = new AbortController().signal; await f.port.create(f.entry, signal);
   f.workspace.items[0]!.workspaceId = 'another-workspace';
   for (const action of [f.port.prepare, f.port.send, f.port.open]) await assert.rejects(action(f.entry, signal), /Workspace/);
+  assert.deepEqual(f.calls.map(c => c[0]), ['create']);
+});
+
+test('task preparation waits for the independent workspace follow stream after create succeeds', async () => {
+  const f = setup(true); const signal = new AbortController().signal;
+  await f.port.create(f.entry, signal);
+  const preparing = f.port.prepare(f.entry, signal);
+  // The create RPC has settled but the Host-authoritative workspace event has not arrived.
+  assert.deepEqual(f.calls.map(c => c[0]), ['create']);
+  f.workspace.items[0]!.sessionIds.push(f.entry.sessionId); f.notify();
+  await preparing;
+  assert.deepEqual(f.calls.map(c => c[0]), ['create', 'preset', 'model', 'rename']);
+  assert.equal(f.listeners.size, 0);
+});
+
+test('missing ownership has a deadline and cancellation removes subscriptions without mutations', async () => {
+  const f = setup(true, 10); const controller = new AbortController();
+  await f.port.create(f.entry, controller.signal);
+  await assert.rejects(f.port.prepare(f.entry, controller.signal), /归属尚未确认/);
+  assert.equal(f.listeners.size, 0);
+  const sending = f.port.send(f.entry, controller.signal);
+  assert.equal(f.listeners.size, 1);
+  controller.abort(new Error('cancelled'));
+  await assert.rejects(sending, /cancelled/);
+  assert.equal(f.listeners.size, 0);
+  f.workspace.items[0]!.sessionIds.push(f.entry.sessionId); f.notify();
+  assert.deepEqual(f.calls.map(c => c[0]), ['create']);
+});
+
+test('late ownership in a different workspace is rejected without opening or sending', async () => {
+  const f = setup(true); const signal = new AbortController().signal;
+  await f.port.create(f.entry, signal);
+  const opening = f.port.open(f.entry, signal);
+  f.workspace.items[0]!.workspaceId = 'another-workspace';
+  f.workspace.items[0]!.sessionIds.push(f.entry.sessionId); f.notify();
+  await assert.rejects(opening, /归属已改变/);
+  assert.equal(f.listeners.size, 0);
+  assert.deepEqual(f.calls.map(c => c[0]), ['create']);
+});
+
+test('navigation changed during ownership confirmation never steals focus', async () => {
+  const f = setup(true); const signal = new AbortController().signal;
+  await f.port.create(f.entry, signal);
+  const opening = f.port.open(f.entry, signal);
+  f.nav.abort(); f.workspace.items[0]!.sessionIds.push(f.entry.sessionId); f.notify();
+  await assert.rejects(opening, /切换页面/);
+  assert.equal(f.listeners.size, 0);
   assert.deepEqual(f.calls.map(c => c[0]), ['create']);
 });
