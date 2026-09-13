@@ -35,6 +35,12 @@ test('pinned runtime accepts a descendant containing only release metadata', asy
   git('add', '.'); git('commit', '-m', 'test release metadata');
   const head = git('rev-parse', 'HEAD'); assert.notEqual(head, base);
   assert.equal(await verifyHarnessCheckout(path, base), head);
+  await mkdir(join(path, '.github/workflows'), { recursive: true });
+  await writeFile(join(path, '.github/workflows/learning-helper-release.yml'), 'name: learning release\n');
+  assert.equal(await verifyHarnessCheckout(path, base), head);
+  await writeFile(join(path, '.github/workflows/unrelated.yml'), 'name: unrelated\n');
+  await assert.rejects(verifyHarnessCheckout(path, base), /runtime differs/);
+  await rm(join(path, '.github/workflows/unrelated.yml'));
   await mkdir(join(path, 'deploy/learning-helper'), { recursive: true });
   await writeFile(join(path, 'deploy/learning-helper/Dockerfile'), 'FROM pinned-image\n');
   assert.equal(await verifyHarnessCheckout(path, base), head);

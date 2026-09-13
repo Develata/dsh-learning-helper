@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { promisify } from 'node:util';
 
 const exec = promisify(execFile);
-const releaseMetadata = new Set(['LEARNING_HELPER.md', 'UPSTREAM_BASE.md', 'UPSTREAM_PATCHES.md']);
+const releaseMetadata = new Set(['LEARNING_HELPER.md', 'UPSTREAM_BASE.md', 'UPSTREAM_PATCHES.md', '.github/workflows/learning-helper-release.yml']);
 // User-authorized presentation-only fork patches; no broad packages/apps exemption.
 const brandingFiles = new Set([
   'apps/web/index.html', 'apps/web/vite.config.ts',
