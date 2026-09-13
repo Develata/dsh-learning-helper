@@ -50,7 +50,7 @@ flowchart LR
 
 ## 快速开始
 
-正式版本统一到 `main`，v0.1.0 / v0.2.0 / v0.2.1 历史 tag 保留。v0.2.2 的安装包与 **linux/amd64** 镜像由两个仓库同名 tag CI 验收后发布；产物状态见 [Release](https://github.com/Develata/learning-helper/releases/tag/v0.2.2)，无需本机构建或安装 Node/pnpm：
+正式版本统一到 `main`，v0.1.0 / v0.2.0 / v0.2.1 历史 tag 保留。v0.2.2 的安装包与 **linux/amd64** 镜像已通过两个仓库同名 tag CI 验收并发布；产物见 [Release](https://github.com/Develata/learning-helper/releases/tag/v0.2.2)，无需本机构建或安装 Node/pnpm：
 
 ```bash
 docker pull ghcr.io/develata/learning-helper:0.2.2

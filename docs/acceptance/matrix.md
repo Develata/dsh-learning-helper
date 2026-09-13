@@ -30,6 +30,7 @@
 | standalone / final full regression | verified | 无sibling的新副本 frozen install/typecheck/165 tests/build/pack；本地5个demo和packed restart |
 | Docker cold boot/restart at aad1263 | verified | 已保存的no-cache/new-volume/Chromium/auth/restart回执；与此前a0fa0c6运行文件等价，不覆盖后续本地修复 |
 | Docker MinerU 本地预览 | verified | 固定v0.2.1基础镜像 + 已测tgz；非root、鉴权、cloud设置真实Chromium、本地PDF、资料/凭据重启持久化；不代表GHCR已发布cloud构建 |
+| Docker / GHCR v0.2.2 | verified | [镜像CI](https://github.com/Develata/learning-helper/actions/runs/34784628196)：5e8f2f2构建一次，原生cloud设置、旧视觉警告、完整Chromium、冷启动、认证/Origin、重启通过，再发布同一镜像；两仓main与annotated tag核对，Release附件校验通过 |
 | Docker / GHCR v0.2.1 | verified | [镜像CI](https://github.com/Develata/learning-helper/actions/runs/34778266086)：b63399c构建镜像、冷启动、完整Chromium、认证/Origin、重启通过；Release回执与digest校验、空Docker凭据目录匿名pull通过 |
 | v0.2 screenshots / captioned video | verified | 真实 packed Chromium、四张PNG、115秒H.264全片解码；作者draft为fixture，说明与入口见 [DEMO](../DEMO.md#仓库演示素材) |
 | dependency scope review | verified | plugin production audit0；实际Docker runtime24条固定upstream风险，见COMPATIBILITY；不声称全部不可达 |

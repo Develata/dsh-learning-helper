@@ -1,6 +1,6 @@
 # 当前状态
 
-**v0.2.2 正式发布准备完成：合入 main，依次推送插件与运行壳 annotated tag。** Release/镜像的远端成功以对应 Actions 和 Release 附件为准；本页随 tag 保存的是发布前验证，不将 tag 推送当作产物发布成功。
+**v0.2.2 已正式发布，两仓 main 为默认分支，annotated tag、Release 与 Docker CI 全部核实。** 本页是发布后记录；tag固定实际构建提交，后续文档提交不改变镜像输入。
 
 ## 本版内容与边界
 
@@ -19,18 +19,20 @@ mineru.net SaaS v4：固定官方 API、单次签名上传、batch poll、受限
 | 旧视觉警告 | 新DOM回归修复前失败、修复后通过；覆盖active MinerU、local fallback、仅assetization ready、新转换失败 |
 | cloud / credentials | fake HTTP、ZIP路径/CRC/UTF-8/体积/页码、配置隔离、canonical切换/历史引用/重启通过；另有上述真实云端文件验收 |
 | dependency audit | plugin production 0；固定Harness runtime既有风险见 [COMPATIBILITY](../COMPATIBILITY.md) |
-| 本地Docker预览 | 非root、鉴权、cloud设置、PDF、资料/凭据重启持久化通过；正式v0.2.2镜像由fork CI单独验收 |
+| 正式Docker / GHCR | [CI](https://github.com/Develata/learning-helper/actions/runs/34784628196) PASS；同一镜像cold boot、真实Chromium、Host/Origin认证与restart persistence通过后原样发布，Release附件校验和通过；空Docker凭据目录匿名pull成功，manifest digest与config摘要均匹配CI回执 |
+| 本地Docker预览 | 非root、鉴权、cloud设置、PDF、资料/凭据重启持久化通过；与已发布v0.2.2镜像分开记录 |
 
 回执在ignored `artifacts/`：`mineru-regression.log`、`mineru-standalone.log`、`mineru-audit.json`、`integration-result.json`、`main-mineru-inspection.json`、`mineru-warning-regression.log`、`mineru-warning-before.log`、`mineru-warning-after.log`。不包含密钥。
 
 ## 版本与部署
 
-- 发布版本：插件 package `0.2.2`，两仓 annotated `v0.2.2`；正式分支统一到 `main`，不删除旧开发分支或移动历史tag。
+- 插件 annotated `v0.2.2`：`5e8f2f2bbceccea23bfdb9987046e3cea4f410fd`；[CI](https://github.com/Develata/dsh-learning-helper/actions/runs/34784369697) tests/package/publish全绿，165 tests；[Release](https://github.com/Develata/dsh-learning-helper/releases/tag/v0.2.2) tgz/SHA256SUMS已核对。
+- 运行壳 annotated `v0.2.2`：`23e47427e514d5a5594173a7c381bf2efe2105e2`；[Release](https://github.com/Develata/learning-helper/releases/tag/v0.2.2) 提供Compose/版本锁/镜像digest/验收回执。两仓正式分支为main，旧分支与tag保留。
 - Harness固定 `0.1.5-rc.2` / upstream `c291e7961a515f6d7af9304e7fd1d257929aef26`；Node `24.18.0` / pnpm `11.7.0`。
-- 插件tag先发布tgz；运行壳lock固定其exact SHA，同名tag再构建与验证Docker镜像。镜像为 `ghcr.io/develata/learning-helper:0.2.2`，linux/amd64；Release Compose固定实际digest。
+- 插件tag先发布tgz；运行壳lock固定其exact SHA，同名tag再构建与验证Docker镜像。镜像为 `ghcr.io/develata/learning-helper:0.2.2`，linux/amd64；Release Compose固定 `sha256:a4a90cd47b5f5190e3ea2ce5329b44ef83c4b4e4160322c595fc55988c38c95b`。
 - v0.1.0验收保持在 `958cf67627736232d06a9eeee70cdcb2c0369248`；全局旧数据只能显式迁移。
 - 用户体验中的预览仍为 `learning-helper-mineru-preview:f249b9b4c04c`，本次提交/发布不会自动替换该容器；旧视觉提示修复尚未装入该实例。
 
 操作：[MinerU配置](operations/mineru.md)、[发布](operations/release.md)、[迁移](operations/migration-v1.md)。真实vision最近验收未声明image能力；不声称所有公式正确。日常实例与用户密钥未修改。
 
-下一步：完成两仓tag CI并核对发布回执；需要更新用户预览时保留原数据与凭据；收集实际学习反馈。无额外功能扩展。
+下一步：用户需要升级预览时保留原数据与凭据，使用正式Release Compose；继续收集实际学习反馈。无额外功能扩展。
